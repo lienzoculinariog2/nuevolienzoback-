@@ -1,4 +1,3 @@
-// src/modules/file-upload/file-upload.service.ts
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,7 +12,8 @@ export class FileUploadService {
     private readonly productsRepository: Repository<Products>,
   ) {}
 
-  async uploadImage(file: Express.Multer.File, productId: string) {
+  // Asegúrate que esta función recibe los 2 parámetros: file y productId
+  async uploadImage(file: Express.Multer.File, productId: string): Promise<Products | null> {
     const product = await this.productsRepository.findOneBy({ id: productId });
 
     if (!product) {
@@ -24,7 +24,7 @@ export class FileUploadService {
     try {
       uploadResponse = await this.fileUploadRepository.uploadImage(file);
     } catch (error) {
-      console.error('Upload Error:', error); // ✅ Esto te ayudará a ver el error exacto en la consola
+      console.error('Upload Error:', error);
       throw new InternalServerErrorException('Failed to upload image');
     }
 

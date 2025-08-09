@@ -9,6 +9,7 @@ import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import dataProducts from '../../data.Products.json';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
+import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
 export class ProductsService {
@@ -19,6 +20,7 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Categories>,
     @InjectRepository(OrderDetail)
     private readonly ordersDetailRepository: Repository<OrderDetail>,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   async seeder() {
@@ -57,7 +59,7 @@ export class ProductsService {
     };
   }
 
-  async create(dto: CreateProductDto): Promise<Products> {
+  async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
     const category = await this.categoriesRepository.findOneBy({
       id: dto.categoryId,
     });
@@ -72,6 +74,7 @@ export class ProductsService {
       throw new ConflictException(`Ya existe un producto con el nombre "${dto.name}".`);
     }
 
+    // 1. Crear producto sin imagen
     const product = this.productsRepository.create({
       name: dto.name,
       description: dto.description,
@@ -81,33 +84,50 @@ export class ProductsService {
       ingredients: dto.ingredients ?? [],
       isActive: dto.isActive ?? true,
       category: category,
-      imgUrl: dto.imgUrl,
+      imgUrl: null,
     });
 
-    return await this.productsRepository.save(product);
+    // 2. Guardar producto para obtener ID
+    const savedProduct = await this.productsRepository.save(product);
+
+    // 3. Subir imagen solo si hay archivo
+    if (file) {
+      // Esto actualizará el producto con la url de la imagen
+      await this.fileUploadService.uploadImage(file, savedProduct.id);
+    }
+
+    // 4. Retornar producto actualizado (incluyendo la imgUrl)
+    return this.productsRepository.findOneOrFail({ where: { id: savedProduct.id } });
   }
 
   async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
-    const { name, price_min, price_max, isActive, categoryId, sortBy, order = 'asc' } = filterDto;
+    const {
+      name,
+      price_min,
+      price_max,
+      isActive,
+      categoryId,
+      sortBy,
+      order = 'asc',
+      page = 1,
+      limit = 10,
+    } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
 
+    // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
       query.andWhere('product.categoryId = :categoryId', { categoryId });
     }
-
     if (name) {
       query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
     }
-
     if (price_min) {
       query.andWhere('product.price >= :price_min', { price_min });
     }
-
     if (price_max) {
       query.andWhere('product.price <= :price_max', { price_max });
     }
-
     if (isActive !== undefined) {
       query.andWhere('product.isActive = :isActive', { isActive });
     }
@@ -115,7 +135,10 @@ export class ProductsService {
     if (sortBy) {
       const orderDirection = order.toUpperCase() as 'ASC' | 'DESC';
       query.orderBy(`product.${sortBy}`, orderDirection);
+    } else {
+      query.orderBy('product.name', 'ASC');
     }
+    query.skip((page - 1) * limit).take(limit);
 
     return await query.getMany();
   }
