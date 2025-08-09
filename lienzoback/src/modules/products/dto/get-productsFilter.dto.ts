@@ -34,4 +34,14 @@ export class GetProductsFilterDto {
   @IsString()
   @IsIn(['asc', 'desc'])
   order?: 'asc' | 'desc';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number;
 }
