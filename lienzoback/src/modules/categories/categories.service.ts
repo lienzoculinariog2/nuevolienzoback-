@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import dataProducts from '../../data.Products.json';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { Categories } from './entities/category.entity';
@@ -11,31 +6,60 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Products } from '../products/entities/product.entity';
-import { FileUploadService } from '../file-upload/file-upload.service';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import toStream from 'buffer-to-stream';
 
 @Injectable()
 export class CategoriesService {
   constructor(
     @InjectRepository(Categories) private readonly categoriesRepository: Repository<Categories>,
     @InjectRepository(Products) private readonly productsRepository: Repository<Products>,
-    private readonly fileUploadService: FileUploadService,
-  ) {}
+  ) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+  }
 
-  async seederService() {
-    const categoriesNames = new Map();
+  private async uploadImage(
+    file: Express.Multer.File,
+    folderName: string,
+  ): Promise<UploadApiResponse> {
+    return new Promise((resolve, reject) => {
+      const upload = cloudinary.uploader.upload_stream(
+        { resource_type: 'auto', folder: folderName },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result!);
+          }
+        },
+      );
+
+      toStream(file.buffer).pipe(upload);
+    });
+  }
+
+  async seeder() {
+    const categoriesMap = new Map();
     dataProducts.forEach((product) => {
-      if (!categoriesNames.has(product.category.name)) {
-        categoriesNames.set(product.category.name, product.category.description);
+      if (!categoriesMap.has(product.category.name)) {
+        categoriesMap.set(product.category.name, {
+          description: product.category.description,
+          imgUrl: product.category.imgUrl,
+        });
       }
     });
 
-    const categoriesArray = Array.from(categoriesNames).map(([name, description]) => ({
+    const categoriesArray = Array.from(categoriesMap).map(([name, data]) => ({
       name,
-      description,
+      description: data.description,
+      imgUrl: data.imgUrl,
     }));
 
     await this.categoriesRepository.upsert(categoriesArray, ['name']);
-
     return {
       message: 'Categories seeded successfully',
       count: categoriesArray.length,
@@ -55,7 +79,7 @@ export class CategoriesService {
     let imgUrl: string | undefined;
 
     if (file) {
-      const cloudinaryResponse = await this.fileUploadService.uploadImageForCategory(file);
+      const cloudinaryResponse = await this.uploadImage(file, 'categories');
 
       if (!cloudinaryResponse.secure_url) {
         throw new Error('Cloudinary upload did not return a secure URL');
@@ -100,16 +124,18 @@ export class CategoriesService {
       throw new NotFoundException(`Category with id ${id} not found`);
     }
 
-    if (categoryDto.name !== undefined) {
-      category.name = categoryDto.name;
-    }
-    if (categoryDto.description !== undefined) {
-      category.description = categoryDto.description;
-    }
+    if (file) {
+      const cloudinaryResponse = await this.uploadImage(file, `categories/${id}`);
 
-    await this.categoriesRepository.save(category);
-
-    return { message: 'Category successfully updated', updatedCategory: category };
+      if (cloudinaryResponse) {
+        categoryDto.imgUrl = cloudinaryResponse.secure_url;
+      }
+    }
+    await this.categoriesRepository.update(id, categoryDto);
+    const updatedCategory = await this.categoriesRepository.findOne({
+      where: { id },
+    });
+    return { message: 'Category successfully updated', updatedCategory };
   }
 
   async inactivate(id: string) {
@@ -120,7 +146,7 @@ export class CategoriesService {
     }
 
     const productsCount = await this.productsRepository.count({
-      where: { categoryId: categoryToInactivate },
+      where: { category: categoryToInactivate },
     });
 
     if (productsCount > 0) {

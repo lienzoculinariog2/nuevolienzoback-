@@ -1,14 +1,16 @@
 import { Categories } from 'src/modules/categories/entities/category.entity';
+import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
+import { Reviews } from 'src/modules/product-review/entities/review.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 
 import { OneToMany } from 'typeorm';
 
-@Entity('products')
+@Entity('PRODUCTOS')
 export class Products {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, unique: true })
   name: string;
 
   @Column({ type: 'text' })
@@ -37,6 +39,12 @@ export class Products {
 
   @ManyToOne(() => Categories, (category) => category.product)
   @JoinColumn({ name: 'category_id' })
-  categoryId: Categories;
+  category: Categories;
   secure_url: string | undefined;
+
+  @OneToMany(() => Reviews, (review) => review.product)
+  reviews: Reviews[];
+
+  @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
+  orderDetails: OrderDetail[];
 }
