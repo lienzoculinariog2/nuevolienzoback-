@@ -52,21 +52,24 @@ export class CategoriesService {
       throw new ConflictException(`Category '${categoryDto.name}' already exists`);
     }
 
-    let imgUrl: string | undefined;
+    let imgUrl: string | undefined; // Esto está bien
 
     if (file) {
-      const cloudinaryResponse = await this.fileUploadService.uploadImageForCategory(file);
+      // ✅ CORREGIDO: Llamamos al método de la forma correcta (un solo argumento).
+      const imageUrl = await this.fileUploadService.uploadImage(file);
 
-      if (!cloudinaryResponse.secure_url) {
-        throw new Error('Cloudinary upload did not return a secure URL');
+      // ✅ CORREGIDO: Usamos la variable correcta ('imageUrl') y verificamos que no sea nula.
+      if (!imageUrl) {
+        throw new InternalServerErrorException('Image upload failed to return a URL');
       }
 
-      imgUrl = cloudinaryResponse.secure_url;
+      // ✅ CORREGIDO: Asignamos el valor correcto.
+      imgUrl = imageUrl;
     }
 
     const category = this.categoriesRepository.create({
       ...categoryDto,
-      imgUrl,
+      imgUrl, // Esto ahora funciona perfectamente.
     });
 
     await this.categoriesRepository.save(category);
@@ -93,19 +96,16 @@ export class CategoriesService {
   }
 
   async update(id: string, categoryDto: UpdateCategoryDto, file?: Express.Multer.File) {
-    const category = await this.categoriesRepository.findOne({
-      where: { id },
-    });
-    if (!category) {
-      throw new NotFoundException(`Category with id ${id} not found`);
+    const category = await this.findOne(id); // Reutilizamos findOne para el chequeo
+
+    // Lógica para subir y actualizar la imagen
+    if (file) {
+      const imageUrl = await this.fileUploadService.uploadImage(file);
+      category.imgUrl = imageUrl;
     }
 
-    if (categoryDto.name !== undefined) {
-      category.name = categoryDto.name;
-    }
-    if (categoryDto.description !== undefined) {
-      category.description = categoryDto.description;
-    }
+    // Actualiza otros campos del DTO
+    Object.assign(category, categoryDto);
 
     await this.categoriesRepository.save(category);
 

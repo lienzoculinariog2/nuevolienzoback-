@@ -1,4 +1,6 @@
 import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+
 export class CreateProductDto {
   @IsString()
   name: string;
@@ -6,20 +8,23 @@ export class CreateProductDto {
   @IsString()
   description: string;
 
+  @Type(() => Number)
   @IsNumber()
   price: number;
 
+  @Type(() => Number)
   @IsNumber()
   stock: number;
 
-  @IsOptional()
-  @IsString()
-  imgUrl?: string;
+  // @IsOptional()
+  // @IsString()
+  // imgUrl?: string;
 
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
 
+  @Type(() => Number)
   @IsNumber()
   caloricLevel: number;
 

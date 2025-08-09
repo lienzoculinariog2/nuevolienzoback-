@@ -2,9 +2,7 @@ import {
   Controller,
   FileTypeValidator,
   MaxFileSizeValidator,
-  Param,
   ParseFilePipe,
-  ParseUUIDPipe,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -12,17 +10,15 @@ import {
 import { FileUploadService } from './file-upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { ProductsService } from '../products/products.service';
 
-@Controller('file')
+@Controller('files')
 export class FileUploadController {
   constructor(
     private readonly fileUploadService: FileUploadService,
-    private readonly productsService: ProductsService,
   ) {}
 
   @ApiBearerAuth()
-  @Post('uploadImage/:productId')
+  @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -36,7 +32,7 @@ export class FileUploadController {
       },
     },
   })
-  uploadImage(
+  uploadFile(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -45,16 +41,14 @@ export class FileUploadController {
             message: 'file is to lage',
           }),
           new FileTypeValidator({
-            // fileType: /(jpg|jpeg|png|webp)$/,
-            // Validación estricta por tipo MIME
+            
             fileType: /^image\/(jpeg|png|webp)$/,
           }),
         ],
       }),
     )
     file: Express.Multer.File,
-    @Param('productId', ParseUUIDPipe) productId: string,
   ) {
-    return this.fileUploadService.uploadImage(file, productId);
+    return this.fileUploadService.uploadImage(file);
   }
 }

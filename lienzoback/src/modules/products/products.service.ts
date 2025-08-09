@@ -5,7 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Products } from './entities/product.entity';
 import { Categories } from '../categories/entities/category.entity';
-import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
+import { GetProductsFilterDto } from './dto/get-products-filter.dto';
+import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
 export class ProductsService {
@@ -14,9 +15,15 @@ export class ProductsService {
     private readonly productsRepository: Repository<Products>,
     @InjectRepository(Categories)
     private readonly categoriesRepository: Repository<Categories>,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
-  async create(dto: CreateProductDto): Promise<Products> {
+   async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
+    let imgUrl: string | null = null;
+    if (file) { 
+      imgUrl = await this.fileUploadService.uploadImage(file);
+    }
+
     const category = await this.categoriesRepository.findOneBy({
       id: dto.categoryId,
     });
@@ -40,33 +47,40 @@ export class ProductsService {
       ingredients: dto.ingredients ?? [],
       isActive: dto.isActive ?? true,
       categoryId: category,
-      imgUrl: dto.imgUrl,
+      imgUrl: imgUrl,
     });
 
     return await this.productsRepository.save(product);
   }
 
   async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
-    const { name, price_min, price_max, isActive, categoryId, sortBy, order = 'asc' } = filterDto;
+    const { 
+        name, 
+        price_min, 
+        price_max, 
+        isActive, 
+        categoryId, 
+        sortBy, 
+        order = 'asc', 
+        page = 1, 
+        limit = 10 
+    } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
 
+    // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
       query.andWhere('product.categoryId = :categoryId', { categoryId });
     }
-
     if (name) {
       query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
     }
-
     if (price_min) {
       query.andWhere('product.price >= :price_min', { price_min });
     }
-
     if (price_max) {
       query.andWhere('product.price <= :price_max', { price_max });
     }
-
     if (isActive !== undefined) {
       query.andWhere('product.isActive = :isActive', { isActive });
     }
@@ -74,49 +88,36 @@ export class ProductsService {
     if (sortBy) {
       const orderDirection = order.toUpperCase() as 'ASC' | 'DESC';
       query.orderBy(`product.${sortBy}`, orderDirection);
+    } else {
+      
+      query.orderBy('product.name', 'ASC'); 
     }
+      query.skip((page - 1) * limit).take(limit);
 
-    return await query.getMany();
+      return await query.getMany();
   }
-
-  // async findAll(page: number = 1, limit: number = 5): Promise<Products[]> {
-  //   if (!page || !limit) {
-  //     return this.productsRepository.find();
-  //   }
-
-  //   return this.productsRepository.find({
-  //     skip: (page - 1) * limit,
-  //     take: limit,
-  //   });
-  // }
 
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },
     });
-
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }
-
     return product;
   }
 
   async update(id: string, updateProductDto: UpdateProductDto): Promise<Products> {
     const product = await this.productsRepository.findOne({ where: { id } });
-
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }
-
     Object.assign(product, updateProductDto);
-
     return this.productsRepository.save(product);
   }
 
   async remove(id: string): Promise<void> {
     const result = await this.productsRepository.delete(id);
-
     if (result.affected === 0) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }

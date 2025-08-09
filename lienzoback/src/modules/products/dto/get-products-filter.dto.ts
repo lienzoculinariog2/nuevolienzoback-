@@ -2,6 +2,17 @@ import { IsString, IsOptional, IsIn, IsNumber, IsUUID, IsBoolean } from 'class-v
 import { Type } from 'class-transformer';
 
 export class GetProductsFilterDto {
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number = 10;
+  
   @IsOptional()
   @IsString()
   name?: string;
