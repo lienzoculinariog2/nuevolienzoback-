@@ -24,7 +24,7 @@ export class Products {
 
   @Column({
     type: 'text',
-    default: 'No image',
+    nullable: true, // permite que sea null
   })
   imgUrl?: string | null;
 
