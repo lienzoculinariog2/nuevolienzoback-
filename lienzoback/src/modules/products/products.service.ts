@@ -18,9 +18,9 @@ export class ProductsService {
     private readonly fileUploadService: FileUploadService,
   ) {}
 
-   async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
+  async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
     let imgUrl: string | null = null;
-    if (file) { 
+    if (file) {
       imgUrl = await this.fileUploadService.uploadImage(file);
     }
 
@@ -54,16 +54,16 @@ export class ProductsService {
   }
 
   async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
-    const { 
-        name, 
-        price_min, 
-        price_max, 
-        isActive, 
-        categoryId, 
-        sortBy, 
-        order = 'asc', 
-        page = 1, 
-        limit = 10 
+    const {
+      name,
+      price_min,
+      price_max,
+      isActive,
+      categoryId,
+      sortBy,
+      order = 'asc',
+      page = 1,
+      limit = 10,
     } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
@@ -89,12 +89,11 @@ export class ProductsService {
       const orderDirection = order.toUpperCase() as 'ASC' | 'DESC';
       query.orderBy(`product.${sortBy}`, orderDirection);
     } else {
-      
-      query.orderBy('product.name', 'ASC'); 
+      query.orderBy('product.name', 'ASC');
     }
-      query.skip((page - 1) * limit).take(limit);
+    query.skip((page - 1) * limit).take(limit);
 
-      return await query.getMany();
+    return await query.getMany();
   }
 
   async getProductById(id: string): Promise<Products | null> {

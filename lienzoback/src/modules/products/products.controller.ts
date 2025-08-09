@@ -10,7 +10,7 @@ import {
   Put,
   ValidationPipe,
   UseInterceptors,
-  UploadedFile
+  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -19,24 +19,26 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { GetProductsFilterDto } from './dto/get-products-filter.dto';
 
-
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('image', { // Intercepta un archivo en el campo 'image'
-    storage: diskStorage({ // Opcional: si quieres guardar en disco antes de subir
-      destination: './uploads'
-    })
-  }))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      // Intercepta un archivo en el campo 'image'
+      storage: diskStorage({
+        // Opcional: si quieres guardar en disco antes de subir
+        destination: './uploads',
+      }),
+    }),
+  )
   create(
     @Body(new ValidationPipe({ transform: true })) createProductDto: CreateProductDto,
-    @UploadedFile() file: Express.Multer.File // Inyecta el archivo
+    @UploadedFile() file: Express.Multer.File, // Inyecta el archivo
   ) {
     return this.productsService.create(createProductDto, file);
   }
-
 
   // @Get()
   // findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '5') {
