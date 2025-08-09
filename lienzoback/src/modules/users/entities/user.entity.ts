@@ -1,49 +1,56 @@
-// import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
-// import { Category } from './category.entity';
-// import { Order } from './order.entity';
-// import { Review } from './review.entity';
-// import { DiscountCodesUsed } from './discount-codes-used.entity';
-// import { Categories } from 'src/modules/categories/entities/category.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Orders } from 'src/modules/orders/entities/order.entity';
+import { Reviews } from 'src/modules/product-review/entities/review.entity';
+import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
+import { Categories } from 'src/modules/categories/entities/category.entity';
 
-// @Entity('users')
-// export class User {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+export enum Roles {
+  ADMIN = 'admin',
+  USER = 'user',
+  GUEST = 'guest',
+}
 
-//   @Column({ length: 255 })
-//   name: string;
+@Entity({ name: 'USERS' })
+export class Users {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-//   @Column({ length: 255, unique: true })
-//   email: string;
+  @Column({ type: 'varchar', length: 50, nullable: false })
+  name: string;
 
-//   @Column({ name: 'password', length: 255 })
-//   passwordHash: string;
+  @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
+  email: string;
 
-//   @Column({ nullable: true })
-//   address: string;
+  @Column({ type: 'varchar', length: 100, nullable: false })
+  password: string;
 
-//   @Column({ type: 'bigint', nullable: true })
-//   phone: number;
+  @Column({ type: 'text', nullable: false })
+  address: string;
 
-//   @Column({ type: 'date', nullable: true })
-//   birthday: Date;
+  @Column({ type: 'bigint', nullable: false })
+  phone: number;
 
-//   @Column({ type: 'enum', enum: ['admin', 'user', 'guest'], default: 'user' })
-//   isAdmin: string;
+  @Column({ type: 'date' })
+  birthday: Date;
 
-//   @Column({ nullable: true })
-//   categoryId: string;
+  @Column({ type: 'enum', enum: Roles, default: Roles.USER })
+  roles: Roles;
 
-//   @ManyToOne(() => Categories, (category) => category.users)
-//   @JoinColumn({ name: 'categoryId' })
-//   category: Category;
+  @Column({ default: false })
+  isSuscribed: boolean;
 
-//   //   @OneToMany(() => Order, (order) => order.user)
-//   //   orders: Order[];
+  @OneToMany(() => Orders, (order) => order.user)
+  orders: Orders[];
 
-//   //   @OneToMany(() => Review, (review) => review.user)
-//   //   reviews: Review[];
+  @OneToMany(() => Reviews, (review) => review.user)
+  reviews: Reviews[];
 
-//   //   @OneToMany(() => DiscountCodesUsed, (discountCodeUsed) => discountCodeUsed.user)
-//   //   discountCodesUsed: DiscountCodesUsed[];
-// }
+  @OneToMany(() => DiscountCodesUsed, (discountCodesUsed) => discountCodesUsed.user)
+  discountCodesUsed: DiscountCodesUsed[];
+
+  @ManyToOne(() => Categories, (category) => category.users, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'category_id' })
+  category: Categories;
+}

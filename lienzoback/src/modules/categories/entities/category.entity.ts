@@ -1,4 +1,5 @@
 import { Products } from 'src/modules/products/entities/product.entity';
+import { Users } from 'src/modules/users/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
 @Entity({ name: 'CATEGORIES' })
@@ -21,6 +22,10 @@ export class Categories {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => Products, (product) => product.categoryId)
+  @OneToMany(() => Products, (product) => product.category)
   product: Products[];
+
+  // categoría de preferencia de un usuario
+  @OneToMany(() => Users, (user) => user.category)
+  users: Users[];
 }

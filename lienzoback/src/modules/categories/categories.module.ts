@@ -5,11 +5,11 @@ import { CategoriesController } from './categories.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Categories } from './entities/category.entity';
 import { Products } from '../products/entities/product.entity';
-import { FileUploadModule } from '../file-upload/file-upload.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Categories, Products]), forwardRef(() => FileUploadModule)],
+  imports: [TypeOrmModule.forFeature([Categories, Products])],
   controllers: [CategoriesController],
   providers: [CategoriesService],
+  exports: [CategoriesService],
 })
 export class CategoriesModule {}

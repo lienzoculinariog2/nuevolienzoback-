@@ -4,9 +4,11 @@
     "description": "Filete de salmón fresco horneado a la perfección, acompañado de espárragos asados y un toque de limón.",
     "price": 750,
     "stock": 25,
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667861/f6b043a7-bbef-4213-84ba-7f8abac99dee/ri5vzizygecgyibi9hp3.jpg",
     "category": {
       "name": "Alto en Proteína",
-      "description": "Platos diseñados para apoyar el desarrollo muscular y mantener la energía, con un alto contenido de proteínas magras."
+      "description": "Platos diseñados para apoyar el desarrollo muscular y mantener la energía, con un alto contenido de proteínas magras.",
+      "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667861/f6b043a7-bbef-4213-84ba-7f8abac99dee/ri5vzizygecgyibi9hp3.jpg"
     },
     "caloricLevel": 2,
     "ingredients": ["salmón", "espárragos", "limón", "pescado"]
@@ -16,9 +18,11 @@
     "description": "Una ensalada rica y refrescante con pechuga de pollo a la parrilla, aguacate, tomate cherry, pepino y aderezo ranch keto.",
     "price": 600,
     "stock": 30,
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667890/f6b043a7-bbef-4213-84ba-7f8abac99dee/cdylqurcmjq7te8qtkul.jpg",
     "category": {
       "name": "Keto",
-      "description": "Opciones bajas en carbohidratos y ricas en grasas saludables, perfectas para quienes siguen la dieta cetogénica."
+      "description": "Opciones bajas en carbohidratos y ricas en grasas saludables, perfectas para quienes siguen la dieta cetogénica.",
+      "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667890/f6b043a7-bbef-4213-84ba-7f8abac99dee/cdylqurcmjq7te8qtkul.jpg"
     },
     "caloricLevel": 3,
     "ingredients": ["pollo", "aguacate", "tomate", "pepino"]
@@ -28,107 +32,43 @@
     "description": "Bowl nutritivo con quinoa cocida, brócoli, zanahoria, pimientos asados y garbanzos, bañado en una vinagreta ligera.",
     "price": 490,
     "stock": 40,
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667973/f6b043a7-bbef-4213-84ba-7f8abac99dee/igpjbsgnbadoxfafsxqt.jpg",
     "category": {
       "name": "Libre de Gluten",
-      "description": "Platos preparados sin gluten, ideales para personas con intolerancia o sensibilidad a esta proteína."
+      "description": "Platos preparados sin gluten, ideales para personas con intolerancia o sensibilidad a esta proteína.",
+      "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667890/f6b043a7-bbef-4213-84ba-7f8abac99dee/cdylqurcmjq7te8qtkul.jpg"
     },
     "caloricLevel": 1,
     "ingredients": ["quinoa", "brócoli", "zanahoria", "garbanzos"]
   },
   {
-    "name": "Filete de Res con Puré de Coliflor",
+    "name": "Filete de Res con Puré",
     "description": "Jugoso filete de res a la parrilla con puré cremoso de coliflor, una alternativa baja en carbohidratos.",
     "price": 890,
     "stock": 20,
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754668005/f6b043a7-bbef-4213-84ba-7f8abac99dee/vqes7wgct3n3coshbcnf",
     "category": {
       "name": "Alto en Proteína",
-      "description": "Platos diseñados para apoyar el desarrollo muscular y mantener la energía, con un alto contenido de proteínas magras."
+      "description": "Platos diseñados para apoyar el desarrollo muscular y mantener la energía, con un alto contenido de proteínas magras.",
+      "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667861/f6b043a7-bbef-4213-84ba-7f8abac99dee/ri5vzizygecgyibi9hp3.jpg"
     },
     "caloricLevel": 4,
     "ingredients": ["carne", "coliflor", "res"]
   },
   {
-    "name": "Curry de Pollo con Leche de Coco",
+    "name": "Pollo Thai con curry",
     "description": "Curry de pollo cremoso y especiado, preparado con leche de coco y una mezcla de vegetales. Ideal para la dieta keto.",
     "price": 680,
     "stock": 15,
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754668219/f6b043a7-bbef-4213-84ba-7f8abac99dee/atdigt1vkkf6xldbx8lm.jpg",
     "category": {
       "name": "Keto",
-      "description": "Opciones bajas en carbohidratos y ricas en grasas saludables, perfectas para quienes siguen la dieta cetogénica."
+      "description": "Opciones bajas en carbohidratos y ricas en grasas saludables, perfectas para quienes siguen la dieta cetogénica.",
+      "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667890/f6b043a7-bbef-4213-84ba-7f8abac99dee/cdylqurcmjq7te8qtkul.jpg"
     },
     "caloricLevel": 5,
     "ingredients": ["pollo", "leche de coco", "especias", "curry"]
-  },
-  {
-    "name": "Pizza de Coliflor sin Gluten",
-    "description": "Base de pizza hecha de coliflor, cubierta con salsa de tomate casera, mozzarella fresca y vegetales variados.",
-    "price": 690,
-    "stock": 10,
-    "category": {
-      "name": "Libre de Gluten",
-      "description": "Platos preparados sin gluten, ideales para personas con intolerancia o sensibilidad a esta proteína."
-    },
-    "caloricLevel": 2,
-    "ingredients": ["coliflor", "queso", "tomate", "vegetales"]
-  },
-  {
-    "name": "Bowl de Açaí sin Azúcar Añadida",
-    "description": "Un bowl energizante de açaí puro, sin azúcares añadidos, decorado con fresas, arándanos y semillas de chía.",
-    "price": 380,
-    "stock": 50,
-    "category": {
-      "name": "Baja en Azúcar",
-      "description": "Comidas y postres con bajo contenido de azúcares, ideales para mantener niveles de glucosa estables."
-    },
-    "caloricLevel": 1,
-    "ingredients": ["açaí", "fresas", "arándanos", "chía"]
-  },
-  {
-    "name": "Pechuga de Pollo Rellena con Espinacas y Queso",
-    "description": "Pechuga de pollo jugosa rellena de espinacas y una mezcla de quesos, horneada hasta dorar.",
-    "price": 620,
-    "stock": 25,
-    "category": {
-      "name": "Alto en Proteína",
-      "description": "Platos diseñados para apoyar el desarrollo muscular y mantener la energía, con un alto contenido de proteínas magras."
-    },
-    "caloricLevel": 4,
-    "ingredients": ["pollo", "espinacas", "queso"]
-  },
-  {
-    "name": "Hamburguesa Keto con Pan de Almendras",
-    "description": "Hamburguesa de carne de res de alta calidad, con pan de harina de almendras, lechuga, tomate, queso cheddar y mayonesa keto.",
-    "price": 780,
-    "stock": 18,
-    "category": {
-      "name": "Keto",
-      "description": "Opciones bajas en carbohidratos y ricas en grasas saludables, perfectas para quienes siguen la dieta cetogénica."
-    },
-    "caloricLevel": 5,
-    "ingredients": ["carne", "pan de almendras", "queso", "lechuga"]
-  },
-  {
-    "name": "Sopa de Lentejas",
-    "description": "Sopa casera de lentejas con vegetales frescos y especias, perfecta para una comida ligera y nutritiva.",
-    "price": 430,
-    "stock": 35,
-    "category": {
-      "name": "Libre de Gluten",
-      "description": "Platos preparados sin gluten, ideales para personas con intolerancia o sensibilidad a esta proteína."
-    },
-    "caloricLevel": 1,
-    "ingredients": ["lentejas", "vegetales", "especias"]
-  },
-  {
-    "name": "Lasaña de Calabacín Vegana",
-    "description": "Láminas finas de calabacín en lugar de pasta, rellenas con una mezcla de ricotta de tofu y espinacas, con salsa de tomate casera.",
-    "price": 550,
-    "stock": 15,
-    "category": {
-      "name": "Vegano",
-      "description": "Comidas 100% basadas en plantas, sin productos de origen animal, ricas en sabor y nutrientes."
-    },
-    "caloricLevel": 2,
-    "ingredients": ["calabacín", "tofu", "espinacas", "tomate"]
   }
 ]
+
+
