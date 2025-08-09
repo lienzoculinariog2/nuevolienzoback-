@@ -54,8 +54,8 @@ export class ProductsController {
     return this.productsService.update(id, updateProductDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.remove(id);
+  @Put('inactivate/:id')
+  inactivate(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.inactivateProduct(id);
   }
 }

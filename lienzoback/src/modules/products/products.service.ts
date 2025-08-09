@@ -1,11 +1,14 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Products } from './entities/product.entity';
 import { Categories } from '../categories/entities/category.entity';
 import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
+import dataProducts from '../../data.Products.json';
+import { OrderDetail } from '../orders/entities/order-detail.entity';
+import { OrderStatus } from '../orders/entities/order.entity';
 
 @Injectable()
 export class ProductsService {
@@ -14,7 +17,45 @@ export class ProductsService {
     private readonly productsRepository: Repository<Products>,
     @InjectRepository(Categories)
     private readonly categoriesRepository: Repository<Categories>,
+    @InjectRepository(OrderDetail)
+    private readonly ordersDetailRepository: Repository<OrderDetail>,
   ) {}
+
+  async seeder() {
+    const categories: Categories[] = await this.categoriesRepository.find();
+
+    const newProducts: Products[] = dataProducts.map((element) => {
+      const category: Categories | undefined = categories.find(
+        (category) => element.category.name === category.name,
+      );
+
+      if (!category) {
+        throw new Error(
+          `Category '${element.category.name}' not found. Cannot seed product '${element.name}'.`,
+        );
+      }
+
+      const newProduct = new Products();
+      newProduct.name = element.name;
+      newProduct.description = element.description;
+      newProduct.price = element.price;
+      newProduct.stock = element.stock;
+      newProduct.imgUrl = element.imgUrl;
+      newProduct.caloricLevel = element.caloricLevel;
+      newProduct.ingredients = element.ingredients;
+
+      newProduct.category = category;
+
+      return newProduct;
+    });
+    await this.productsRepository.upsert(newProducts, ['name']);
+
+    return {
+      message: 'Products seeded successfully',
+      count: newProducts.length,
+      newProducts,
+    };
+  }
 
   async create(dto: CreateProductDto): Promise<Products> {
     const category = await this.categoriesRepository.findOneBy({
@@ -39,7 +80,7 @@ export class ProductsService {
       caloricLevel: dto.caloricLevel,
       ingredients: dto.ingredients ?? [],
       isActive: dto.isActive ?? true,
-      categoryId: category,
+      category: category,
       imgUrl: dto.imgUrl,
     });
 
@@ -114,11 +155,36 @@ export class ProductsService {
     return this.productsRepository.save(product);
   }
 
-  async remove(id: string): Promise<void> {
-    const result = await this.productsRepository.delete(id);
-
-    if (result.affected === 0) {
-      throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
+  async inactivateProduct(id: string): Promise<Products> {
+    const productToInactivate = await this.productsRepository.findOne({
+      where: { id },
+    });
+    if (!productToInactivate) {
+      throw new NotFoundException(`Product with ${id} not found.`);
     }
+
+    if (productToInactivate.stock > 0) {
+      throw new ConflictException(
+        `Cannot inactivate the product with ID ${id}, it has available stock.`,
+      );
+    }
+
+    const activeOrdersCount = await this.ordersDetailRepository.count({
+      where: {
+        product: { id },
+        order: {
+          statusOrder: Not(In([OrderStatus.CANCELED, OrderStatus.DELIVERED])),
+        },
+      },
+    });
+
+    if (activeOrdersCount > 0) {
+      throw new ConflictException(
+        `Cannot inactivate the product with ID ${id}, it has ${activeOrdersCount} active orders.`,
+      );
+    }
+
+    productToInactivate.isActive = false;
+    return this.productsRepository.save(productToInactivate);
   }
 }

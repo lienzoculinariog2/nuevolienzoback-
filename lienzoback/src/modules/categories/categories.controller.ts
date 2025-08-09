@@ -17,16 +17,10 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Optional } from '@nestjs/common';
 
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
-
-  @Get('seeder')
-  seeder() {
-    return this.categoriesService.seederService();
-  }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -64,12 +58,11 @@ export class CategoriesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() categoryDto: UpdateCategoryDto,
-    @Optional()
     @UploadedFile(
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 300 * 1024 }),
-          new FileTypeValidator({ fileType: /image\/(jpeg|png|gif)/ }),
+          new FileTypeValidator({ fileType: 'image/(jpeg|png|gif)' }),
         ],
         fileIsRequired: false,
       }),
