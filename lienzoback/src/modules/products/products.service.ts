@@ -45,7 +45,6 @@ export class ProductsService {
       newProduct.imgUrl = element.imgUrl;
       newProduct.caloricLevel = element.caloricLevel;
       newProduct.ingredients = element.ingredients;
-
       newProduct.category = category;
 
       return newProduct;
@@ -115,6 +114,8 @@ export class ProductsService {
 
     const query = this.productsRepository.createQueryBuilder('product');
 
+    query.leftJoinAndSelect('product.category', 'category');
+
     // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
       query.andWhere('product.categoryId = :categoryId', { categoryId });
@@ -157,6 +158,7 @@ export class ProductsService {
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },
+      relations: ['category'],
     });
 
     if (!product) {
