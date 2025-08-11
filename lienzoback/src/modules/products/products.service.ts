@@ -114,6 +114,7 @@ export class ProductsService {
     } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
+    query.leftJoinAndSelect('product.category', 'category');
 
     // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
@@ -157,6 +158,7 @@ export class ProductsService {
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },
+      relations: ['category'],
     });
 
     if (!product) {
