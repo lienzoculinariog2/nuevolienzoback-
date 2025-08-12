@@ -1,3 +1,4 @@
+// src/users/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Orders } from 'src/modules/orders/entities/order.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
@@ -21,16 +22,18 @@ export class Users {
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
   email: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  password: string;
+  // Añade este campo para guardar el ID de usuario que te da Auth0
+  @Column({ type: 'varchar', unique: true, nullable: false })
+  auth0Id: string;
 
-  @Column({ type: 'text', nullable: false })
+  // Los campos que el usuario completará después del registro
+  @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ type: 'bigint', nullable: false })
+  @Column({ type: 'bigint', nullable: true })
   phone: number;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   birthday: Date;
 
   @Column({ type: 'enum', enum: Roles, default: Roles.USER })
