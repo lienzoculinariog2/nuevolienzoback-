@@ -96,7 +96,10 @@ export class ProductsService {
     }
 
     // 4. Retornar producto actualizado (incluyendo la imgUrl)
-    return this.productsRepository.findOneOrFail({ where: { id: savedProduct.id } });
+    return this.productsRepository.findOneOrFail({
+      where: { id: savedProduct.id },
+      relations: ['category'],
+    });
   }
 
   async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
@@ -113,6 +116,7 @@ export class ProductsService {
     } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
+    query.leftJoinAndSelect('product.category', 'category');
 
     query.leftJoinAndSelect('product.category', 'category');
 
