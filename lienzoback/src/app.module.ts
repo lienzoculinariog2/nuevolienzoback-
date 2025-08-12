@@ -12,6 +12,7 @@ import { ProductsService } from './modules/products/products.service';
 import { OrdersModule } from './modules/orders/orders.module';
 import { DiscountCodesModule } from './modules/discount-codes/discount-codes.module';
 import { ReviewsModule } from './modules/product-review/reviews.module';
+//import { CartModule } from './modules/cart/cart.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ReviewsModule } from './modules/product-review/reviews.module';
     DiscountCodesModule,
     ReviewsModule,
     DiscountCodesModule,
+    //CartModule,
   ],
   controllers: [],
   providers: [],

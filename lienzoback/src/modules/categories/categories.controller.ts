@@ -61,7 +61,7 @@ export class CategoriesController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 300 * 1024 }),
+          new MaxFileSizeValidator({ maxSize: 300000 }),
           new FileTypeValidator({ fileType: 'image/(jpeg|png|gif)' }),
         ],
         fileIsRequired: false,
