@@ -118,7 +118,7 @@ export class ProductsService {
 
     // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
-      query.andWhere('product.categoryId = :categoryId', { categoryId });
+      query.andWhere('product.category_id = :categoryId', { categoryId });
     }
     if (name) {
       query.andWhere('product.name ILIKE :name', { name: `%${name}%` });

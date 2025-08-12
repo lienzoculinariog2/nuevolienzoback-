@@ -31,7 +31,7 @@
 //   ingredients?: string[];
 // }
 import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateProductDto {
   @IsString()
@@ -50,6 +50,7 @@ export class CreateProductDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === '1')
   isActive?: boolean;
 
   @IsNumber()

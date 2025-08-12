@@ -1,3 +1,4 @@
+import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
 import { Categories } from 'src/modules/categories/entities/category.entity';
 import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
@@ -47,4 +48,7 @@ export class Products {
 
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
   orderDetails: OrderDetail[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.product)
+  cartItems: CartItem[];
 }
