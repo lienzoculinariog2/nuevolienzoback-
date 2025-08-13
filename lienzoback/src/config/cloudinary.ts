@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
-import { config as dotenvconfig } from 'dotenv';
 
-dotenvconfig({ path: '.env.development' });
+
 
 @Injectable()
 export class CloudinaryConfig {

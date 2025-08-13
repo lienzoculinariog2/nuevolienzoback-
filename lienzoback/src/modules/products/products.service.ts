@@ -147,17 +147,6 @@ export class ProductsService {
     return await query.getMany();
   }
 
-  // async findAll(page: number = 1, limit: number = 5): Promise<Products[]> {
-  //   if (!page || !limit) {
-  //     return this.productsRepository.find();
-  //   }
-
-  //   return this.productsRepository.find({
-  //     skip: (page - 1) * limit,
-  //     take: limit,
-  //   });
-  // }
-
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },

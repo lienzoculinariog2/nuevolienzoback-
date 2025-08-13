@@ -18,6 +18,9 @@ import { ReviewsModule } from './modules/product-review/reviews.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeOrmConfig],
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
+      // En Render no debe existir archivo .env.production, variables vienen del panel
+      ignoreEnvFile: process.env.NODE_ENV === 'production', // Ignorar archivos .env en prod
     }),
 
     TypeOrmModule.forRootAsync({
@@ -45,9 +48,10 @@ export class AppModule implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    console.info('Running all seeders...');
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('Running seeders...');
     await this.categoriesService.seeder();
     await this.productsService.seeder();
-    console.info('All seeders finished successfully.');
-  }
+    console.info('Seeders finished.');
+  }}
 }
