@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Products } from '../products/entities/product.entity';
 import { FileUploadRepository } from './file-upload.repository';
+import type { Express } from 'express';
 
 @Injectable()
 export class FileUploadService {

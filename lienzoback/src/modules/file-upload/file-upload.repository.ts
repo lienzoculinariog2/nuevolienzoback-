@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { Injectable } from '@nestjs/common';
 import { bufferToStream } from '../common/utils/buffer-to-stream';
+import type { Express } from 'express';
 
 @Injectable()
 export class FileUploadRepository {

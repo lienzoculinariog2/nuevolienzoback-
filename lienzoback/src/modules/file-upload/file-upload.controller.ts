@@ -13,6 +13,7 @@ import { FileUploadService } from './file-upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { ProductsService } from '../products/products.service';
+import type { Express } from 'express';
 
 @Controller('file')
 export class FileUploadController {
