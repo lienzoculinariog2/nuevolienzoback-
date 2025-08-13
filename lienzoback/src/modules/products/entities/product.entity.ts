@@ -1,8 +1,17 @@
 import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
 import { Categories } from 'src/modules/categories/entities/category.entity';
+import { Ingredients } from 'src/modules/ingredients/entities/ingredient.entity';
 import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 
 import { OneToMany } from 'typeorm';
 
@@ -25,7 +34,7 @@ export class Products {
 
   @Column({
     type: 'text',
-    nullable: true, // permite que sea null
+    nullable: true,
   })
   imgUrl?: string | null;
 
@@ -35,8 +44,21 @@ export class Products {
   @Column({ type: 'int', nullable: true })
   caloricLevel: number;
 
-  @Column('simple-array', { nullable: true })
-  ingredients: string[];
+  @ManyToMany(() => Ingredients, (ingredient) => ingredient.products, {
+    cascade: true,
+  })
+  @JoinTable({
+    name: 'PRODUCTS_INGREDIENTS',
+    joinColumn: {
+      name: 'products_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'ingredients_id',
+      referencedColumnName: 'id',
+    },
+  })
+  ingredients: Ingredients[];
 
   @ManyToOne(() => Categories, (category) => category.product)
   @JoinColumn({ name: 'category_id' })
