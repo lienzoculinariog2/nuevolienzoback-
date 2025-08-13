@@ -8,6 +8,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Products } from '../products/entities/product.entity';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import toStream from 'buffer-to-stream';
+import type { Express } from 'express';
 
 @Injectable()
 export class CategoriesService {

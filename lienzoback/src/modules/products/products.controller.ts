@@ -18,6 +18,7 @@ import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Products } from './entities/product.entity';
+import type { Express } from 'express';
 
 @ApiTags('Products')
 @Controller('products')

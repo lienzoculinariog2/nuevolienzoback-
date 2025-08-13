@@ -10,6 +10,7 @@ import dataProducts from '../../data.Products.json';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import type { Express } from 'express';
 
 @Injectable()
 export class ProductsService {
