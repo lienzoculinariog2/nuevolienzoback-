@@ -11,21 +11,47 @@
       "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755017405/categories/e984fd1f-9ddc-4382-bafd-1660d03c73c4/zvembgs3juqpkxhboslx.jpg"
     },
     "caloricLevel": 2,
-    "ingredients": ["salmón", "espárragos", "limón", "pescado"]
+    "ingredients": [
+      {
+        "name": "salmón"
+      },
+      {
+        "name": "espárragos"
+      },
+      {
+        "name": "limón"
+      },
+      {
+        "name": "pescado"
+      }
+    ]
   },
   {
     "name": "Ensalada Keto de Pollo y Aguacate",
     "description": "Una ensalada rica y refrescante con pechuga de pollo a la parrilla, aguacate, tomate cherry, pepino y aderezo ranch keto.",
     "price": 600,
     "stock": 30,
-    "imgUrl": "",
+    "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755017603/categories/d7f9e45b-eb56-439a-952c-4469f30ecd53/cqnb8wspknktyb2pwtov.jpg",
     "category": {
       "name": "Creación Pura",
       "description": "Creación Pura refleja la esencia de la dieta vegana, libre de ingredientes de origen animal, resalta la pureza y creatividad en platos hechos exclusivamente con productos de la tierra.",
       "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755017652/categories/d7f9e45b-eb56-439a-952c-4469f30ecd53/hriiwq12dznctks6av0z.jpg"
     },
     "caloricLevel": 3,
-    "ingredients": ["pollo", "aguacate", "tomate", "pepino"]
+    "ingredients": [
+      {
+        "name": "pollo"
+      },
+      {
+        "name": "aguacate"
+      },
+      {
+        "name": "tomate"
+      },
+      {
+        "name": "pepino"
+      }
+    ]
   },
   {
     "name": "Bowl de Quinoa y Vegetales",
@@ -39,7 +65,20 @@
       "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755017905/categories/40783808-4df6-4301-aa0a-5e4e8e136437/cver4pk5mglomiolhvjn.jpg"
     },
     "caloricLevel": 1,
-    "ingredients": ["quinoa", "brócoli", "zanahoria", "garbanzos"]
+    "ingredients": [
+      {
+        "name": "quinoa"
+      },
+      {
+        "name": "brócoli"
+      },
+      {
+        "name": "zanahoria"
+      },
+      {
+        "name": "garbanzos"
+      }
+    ]
   },
   {
     "name": "Filete de Res con Puré",
@@ -53,7 +92,17 @@
       "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755018176/categories/c5d66eb3-b27b-4586-aaa7-a2b3e740fbfe/sknpvcxpjucpieje5c21.jpg"
     },
     "caloricLevel": 4,
-    "ingredients": ["carne", "coliflor", "res"]
+    "ingredients": [
+      {
+        "name": "carne"
+      },
+      {
+        "name": "coliflor"
+      },
+      {
+        "name": "res"
+      }
+    ]
   },
   {
     "name": "Pollo Thai con curry",
@@ -67,6 +116,19 @@
       "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755018310/categories/9f438cc5-23b7-4bde-9532-d47f34ba364c/lcmi6vdvolcpsnql87ba.jpg"
     },
     "caloricLevel": 5,
-    "ingredients": ["pollo", "leche de coco", "especias", "curry"]
+    "ingredients": [
+      {
+        "name": "pollo"
+      },
+      {
+        "name": "leche de coco"
+      },
+      {
+        "name": "especias"
+      },
+      {
+        "name": "curry"
+      }
+    ]
   }
 ]
