@@ -1,4 +1,4 @@
-import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
+//import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
 import { Categories } from 'src/modules/categories/entities/category.entity';
 import { Ingredients } from 'src/modules/ingredients/entities/ingredient.entity';
 import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
@@ -71,6 +71,6 @@ export class Products {
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
   orderDetails: OrderDetail[];
 
-  @OneToMany(() => CartItem, (cartItem) => cartItem.product)
-  cartItems: CartItem[];
+  // @OneToMany(() => CartItem, (cartItem) => cartItem.product)
+  // cartItems: CartItem[];
 }
