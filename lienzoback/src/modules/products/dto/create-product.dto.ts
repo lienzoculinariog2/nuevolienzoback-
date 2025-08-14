@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Pizza Margarita', description: 'Nombre único del producto' })
@@ -25,6 +25,7 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === '1')
   isActive?: boolean;
 
   @ApiProperty({ example: 250, description: 'Nivel calórico del producto' })

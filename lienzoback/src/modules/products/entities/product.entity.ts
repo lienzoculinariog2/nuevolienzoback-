@@ -1,8 +1,18 @@
+import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Categories } from 'src/modules/categories/entities/category.entity';
+import { Ingredients } from 'src/modules/ingredients/entities/ingredient.entity';
 import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn, OneToMany,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 
 @Entity('products')
 export class Products {
@@ -39,8 +49,21 @@ export class Products {
   caloricLevel: number;
 
   @ApiPropertyOptional({ example: ['salmón', 'espárragos', 'limón'], description: 'Lista de ingredientes' })
-  @Column('simple-array', { nullable: true })
-  ingredients: string[];
+  @ManyToMany(() => Ingredients, (ingredient) => ingredient.products, {
+    cascade: true,
+  })
+  @JoinTable({
+    name: 'PRODUCTS_INGREDIENTS',
+    joinColumn: {
+      name: 'products_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'ingredients_id',
+      referencedColumnName: 'id',
+    },
+  })
+  ingredients: Ingredients[];
 
   @ApiProperty({ description: 'Categoría a la que pertenece el producto', type: () => Categories })
   @ManyToOne(() => Categories, (category) => category.product)
@@ -49,6 +72,10 @@ export class Products {
   orderDetails: any;
   reviews: any;
 
-  // Relación con reviews y orderDetails omitida en la documentación para simplificar
+  @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
+  orderDetails: OrderDetail[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.product)
+  cartItems: CartItem[];
 }
 

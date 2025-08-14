@@ -34,6 +34,10 @@ export class GetProductsFilterDto {
   @ApiPropertyOptional({ example: 'price', description: 'Campo por el cual ordenar', enum: ['name', 'price', 'stock', 'caloricLevel'] })
   @IsOptional()
   @IsString()
+  ingredient?: string;
+
+  @IsOptional()
+  @IsString()
   @IsIn(['name', 'price', 'stock', 'caloricLevel'])
   sortBy?: 'name' | 'price' | 'stock' | 'caloricLevel';
 

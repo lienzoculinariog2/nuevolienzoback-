@@ -12,6 +12,9 @@ import { ProductsService } from './modules/products/products.service';
 import { OrdersModule } from './modules/orders/orders.module';
 import { DiscountCodesModule } from './modules/discount-codes/discount-codes.module';
 import { ReviewsModule } from './modules/product-review/reviews.module';
+//import { CartModule } from './modules/cart/cart.module';
+import { IngredientsModule } from './modules/ingredients/ingredients.module';
+import { IngredientsService } from './modules/ingredients/ingredients.service';
 
 @Module({
   imports: [
@@ -37,6 +40,8 @@ import { ReviewsModule } from './modules/product-review/reviews.module';
     DiscountCodesModule,
     ReviewsModule,
     DiscountCodesModule,
+    IngredientsModule,
+    //CartModule,
   ],
   controllers: [],
   providers: [],
@@ -45,13 +50,28 @@ export class AppModule implements OnModuleInit {
   constructor(
     private readonly categoriesService: CategoriesService,
     private readonly productsService: ProductsService,
+    private readonly ingredientsService: IngredientsService,
   ) {}
 
   async onModuleInit() {
   if (process.env.NODE_ENV !== 'production') {
-    console.info('Running seeders...');
-    await this.categoriesService.seeder();
-    await this.productsService.seeder();
-    console.info('Seeders finished.');
-  }}
+
+    const areTablesPopulated = await this.productsService.isPopulated();
+    if (areTablesPopulated) {
+      console.log('Database already populated. Skipping seeder.');
+      return;
+    }
+
+    console.log('Seeding categories...');
+    await this.categoriesService.seedCategories();
+
+    console.log('Seeding ingredients...');
+    await this.ingredientsService.seedIngredients();
+
+    console.log('Seeding products and linking relationships...');
+    await this.productsService.seedProducts();
+
+    console.log('Seeder finished successfully.');
+  }
+}
 }

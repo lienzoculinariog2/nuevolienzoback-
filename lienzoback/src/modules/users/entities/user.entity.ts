@@ -1,8 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+} from 'typeorm';
 import { Orders } from 'src/modules/orders/entities/order.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
 import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
 import { Categories } from 'src/modules/categories/entities/category.entity';
+import { Cart } from 'src/modules/cart/entities/cart.entity';
 
 export enum Roles {
   ADMIN = 'admin',
@@ -53,4 +62,8 @@ export class Users {
   })
   @JoinColumn({ name: 'category_id' })
   category: Categories;
+
+  @OneToOne(() => Cart, (cart) => cart.user)
+  @JoinColumn({ name: 'cart_id' })
+  cart: Cart;
 }

@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCategoryDto {
   /**
@@ -6,6 +6,7 @@ export class CreateCategoryDto {
    *@example vegetariano
    */
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   /**
@@ -13,6 +14,7 @@ export class CreateCategoryDto {
    *@example "Comidas sin carne, ave ni pescado, que pueden incluir lácteos y huevos, perfectas para quienes siguen esta dieta."
    */
   @IsString()
+  @IsNotEmpty()
   description: string;
 
   @IsOptional()

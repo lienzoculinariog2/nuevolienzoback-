@@ -43,29 +43,18 @@ export class CategoriesService {
     });
   }
 
-  async seeder() {
-    const categoriesMap = new Map();
-    dataProducts.forEach((product) => {
-      if (!categoriesMap.has(product.category.name)) {
-        categoriesMap.set(product.category.name, {
-          description: product.category.description,
-          imgUrl: product.category.imgUrl,
-        });
-      }
+  async seedCategories(): Promise<void> {
+    const categoriesToSeed = new Set(
+      dataProducts.map((product) => JSON.stringify(product.category)),
+    );
+
+    const categoriesData = Array.from(categoriesToSeed).map((catStr) => {
+      const { name, description, imgUrl } = JSON.parse(catStr);
+      return this.categoriesRepository.create({ name, description, imgUrl });
     });
 
-    const categoriesArray = Array.from(categoriesMap).map(([name, data]) => ({
-      name,
-      description: data.description,
-      imgUrl: data.imgUrl,
-    }));
-
-    await this.categoriesRepository.upsert(categoriesArray, ['name']);
-    return {
-      message: 'Categories seeded successfully',
-      count: categoriesArray.length,
-      categories: categoriesArray,
-    };
+    // Utiliza el método save, TypeORM maneja la inserción o actualización
+    await this.categoriesRepository.save(categoriesData, { chunk: 100 });
   }
 
   async create(categoryDto: CreateCategoryDto, file?: Express.Multer.File) {
