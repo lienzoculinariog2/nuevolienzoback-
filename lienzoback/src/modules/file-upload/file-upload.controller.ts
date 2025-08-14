@@ -39,17 +39,7 @@ export class FileUploadController {
   uploadImage(
     @UploadedFile(
       new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({
-            maxSize: 200000,
-            message: 'file is to lage',
-          }),
-          new FileTypeValidator({
-            // fileType: /(jpg|jpeg|png|webp)$/,
-            // Validación estricta por tipo MIME
-            fileType: /^image\/(jpeg|png|webp)$/,
-          }),
-        ],
+        validators: [],
       }),
     )
     file: Express.Multer.File,
