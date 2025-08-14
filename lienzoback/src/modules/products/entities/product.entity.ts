@@ -17,6 +17,9 @@ import { OneToMany } from 'typeorm';
 
 @Entity('PRODUCTOS')
 export class Products {
+  static image(image: any) {
+    throw new Error('Method not implemented.');
+  }
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

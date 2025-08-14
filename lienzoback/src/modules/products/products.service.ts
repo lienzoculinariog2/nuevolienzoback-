@@ -11,7 +11,6 @@ import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { Ingredients } from '../ingredients/entities/ingredient.entity';
-import { IngredientsService } from '../ingredients/ingredients.service';
 
 @Injectable()
 export class ProductsService {
@@ -22,8 +21,9 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Categories>,
     @InjectRepository(OrderDetail)
     private readonly ordersDetailRepository: Repository<OrderDetail>,
+    @InjectRepository(Ingredients)
+    private readonly ingredientsRepository: Repository<Ingredients>,
     private readonly fileUploadService: FileUploadService,
-    private readonly ingredientsService: IngredientsService,
   ) {}
 
   async isPopulated(): Promise<boolean> {
@@ -33,7 +33,7 @@ export class ProductsService {
 
   async seedProducts(): Promise<void> {
     const categories: Categories[] = await this.categoriesRepository.find();
-    const ingredients: Ingredients[] = await this.ingredientsService.findAll();
+    const ingredients: Ingredients[] = await this.ingredientsRepository.find();
 
     const productsToSeed = dataProducts.map((productData) => {
       const category = categories.find((cat) => cat.name === productData.category.name);
@@ -72,11 +72,19 @@ export class ProductsService {
     }
 
     const ingredients: Ingredients[] = [];
-    if (dto.ingredients && dto.ingredients.length > 0) {
-      for (const ingredientName of dto.ingredients) {
-        const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
-        ingredients.push(ingredient);
+    if (dto.ingredientIds && dto.ingredientIds.length > 0) {
+      const foundIngredients = await this.ingredientsRepository.findBy({
+        id: In(dto.ingredientIds),
+      });
+
+      if (foundIngredients.length !== dto.ingredientIds.length) {
+        const foundIds = new Set(foundIngredients.map((i) => i.id));
+        const notFoundIds = dto.ingredientIds.filter((id) => !foundIds.has(id));
+        throw new NotFoundException(
+          `Los siguientes ingredientes no fueron encontrados: ${notFoundIds.join(', ')}`,
+        );
       }
+      ingredients.push(...foundIngredients);
     }
 
     const product = this.productsRepository.create({
@@ -165,8 +173,12 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto): Promise<Products> {
-    const { categoryId, ingredients, ...productData } = updateProductDto;
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    file: Express.Multer.File,
+  ): Promise<Products> {
+    const { categoryId, ingredientIds, ...productData } = updateProductDto;
 
     const product = await this.productsRepository.findOne({
       where: { id },
@@ -184,14 +196,30 @@ export class ProductsService {
       }
       product.category = category;
     }
-    if (ingredients) {
-      const newIngredients = await Promise.all(
-        ingredients.map((name) => this.ingredientsService.findOrCreate(name)),
-      );
-      product.ingredients = newIngredients;
+
+    if (ingredientIds) {
+      const foundIngredients = await this.ingredientsRepository.findBy({ id: In(ingredientIds) });
+      if (foundIngredients.length !== ingredientIds.length) {
+        const foundIds = new Set(foundIngredients.map((i) => i.id));
+        const notFoundIds = ingredientIds.filter((id) => !foundIds.has(id));
+        throw new NotFoundException(
+          `Los siguientes ingredientes no fueron encontrados: ${notFoundIds.join(', ')}`,
+        );
+      }
+      product.ingredients = foundIngredients;
     }
+
+    if (file) {
+      await this.fileUploadService.uploadImage(file, product.id);
+    }
+
     Object.assign(product, productData);
-    return this.productsRepository.save(product);
+    await this.productsRepository.save(product);
+
+    return this.productsRepository.findOneOrFail({
+      where: { id: product.id },
+      relations: ['category', 'ingredients'],
+    });
   }
 
   async inactivateProduct(id: string): Promise<Products> {
