@@ -27,6 +27,10 @@ export class GetProductsFilterDto {
 
   @IsOptional()
   @IsString()
+  ingredient?: string;
+
+  @IsOptional()
+  @IsString()
   @IsIn(['name', 'price', 'stock', 'caloricLevel'])
   sortBy?: 'name' | 'price' | 'stock' | 'caloricLevel';
 
