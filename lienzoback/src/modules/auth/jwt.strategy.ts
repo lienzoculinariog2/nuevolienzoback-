@@ -1,3 +1,4 @@
+//
 // src/auth/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
@@ -8,7 +9,9 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly configService: ConfigService) {
-    // La llamada a 'super' debe ser la primera línea.
+    const auth0Domain = configService.get<string>('AUTH0_DOMAIN');
+    const auth0Audience = configService.get<string>('AUTH0_AUDIENCE');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -16,15 +19,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: `https://${configService.get('REACT_APP_AUTH0_DOMAIN')}/.well-known/jwks.json`,
+        jwksUri: `https://${auth0Domain}/.well-known/jwks.json`,
       }),
-      audience: 'http://localhost:3000/api', 
-      issuer: `https://${configService.get('REACT_APP_AUTH0_DOMAIN')}/`,
+      audience: auth0Audience,
+      issuer: `https://${auth0Domain}/`,
       algorithms: ['RS256'],
     });
   }
 
-  // Se elimina el 'async' ya que no se usa 'await'
   validate(payload: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return payload;
