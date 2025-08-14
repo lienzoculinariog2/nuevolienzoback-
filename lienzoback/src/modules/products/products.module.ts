@@ -8,12 +8,12 @@ import { FileUploadModule } from '../file-upload/file-upload.module';
 import { Orders } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { IngredientsModule } from '../ingredients/ingredients.module';
+import { Ingredients } from '../ingredients/entities/ingredient.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Categories, Products, Orders, OrderDetail]),
+    TypeOrmModule.forFeature([Categories, Products, Orders, OrderDetail, Ingredients]),
     FileUploadModule,
-    IngredientsModule,
   ],
   controllers: [ProductsController],
   providers: [ProductsService],
