@@ -10,7 +10,7 @@ export class Categories {
   @Column({ type: 'varchar', length: 50, nullable: false, unique: true })
   name: string;
 
-  @Column({ type: 'varchar', length: 200, nullable: false })
+  @Column({ type: 'varchar', length: 255, nullable: false, default: 'Sin descripción' })
   description: string;
 
   @Column({
