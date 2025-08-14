@@ -10,8 +10,6 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -28,10 +26,7 @@ export class CategoriesController {
     @Body() categoryDto: CreateCategoryDto,
     @UploadedFile(
       new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 300 * 1024 }),
-          new FileTypeValidator({ fileType: /image\/(jpeg|png|gif)/ }),
-        ],
+        validators: [],
         fileIsRequired: false,
       }),
     )
@@ -60,10 +55,7 @@ export class CategoriesController {
     @Body() categoryDto: UpdateCategoryDto,
     @UploadedFile(
       new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 300000 }),
-          new FileTypeValidator({ fileType: 'image/(jpeg|png|gif)' }),
-        ],
+        validators: [],
         fileIsRequired: false,
       }),
     )
