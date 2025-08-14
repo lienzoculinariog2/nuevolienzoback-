@@ -18,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         jwksRequestsPerMinute: 5,
         jwksUri: `https://${configService.get('REACT_APP_AUTH0_DOMAIN')}/.well-known/jwks.json`,
       }),
-      audience: 'http://localhost:3000/api', 
+      audience: 'http://localhost:3000/api',
       issuer: `https://${configService.get('REACT_APP_AUTH0_DOMAIN')}/`,
       algorithms: ['RS256'],
     });
