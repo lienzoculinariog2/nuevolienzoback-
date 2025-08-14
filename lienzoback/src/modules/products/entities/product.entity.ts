@@ -4,7 +4,7 @@ import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 
-@Entity('PRODUCTOS')
+@Entity('products')
 export class Products {
   @ApiProperty({ example: 'uuid-product-id', description: 'ID único del producto' })
   @PrimaryGeneratedColumn('uuid')

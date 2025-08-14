@@ -3,23 +3,28 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 
 const isProd = process.env.NODE_ENV === 'production';
 
+/** 🔑 Interruptores por ENV (controlas desde Render) */
+const allowSync = process.env.TYPEORM_SYNC === 'true';   // <- crea/actualiza tablas
+const dropAll   = process.env.TYPEORM_DROP === 'true';   // <- borra y recrea TODO (usar 1 sola vez)
+
 const config = {
   type: 'postgres',
-  // En producción usamos la URL completa, en desarrollo usamos host/username/password/database
   url: isProd ? process.env.DATABASE_URL : undefined,
   host: isProd ? undefined : process.env.DB_HOST,
-  port: isProd ? undefined : process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+  port: isProd ? undefined : (process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432),
   username: isProd ? undefined : process.env.DB_USERNAME,
   password: isProd ? undefined : process.env.DB_PASSWORD,
   database: isProd ? undefined : process.env.DB_NAME,
-  synchronize: !isProd,             // sincronizar solo en desarrollo
-  logging: !isProd,                 // logging solo en desarrollo
-  dropSchema: false,
-  ssl: isProd ? { rejectUnauthorized: false } : false,  // SSL requerido en Render
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-};
+
+  /** 👇 clave para solucionar HOY */
+  synchronize: allowSync,
+  dropSchema: dropAll,
+
+  logging: true,
+  ssl: isProd ? { rejectUnauthorized: false } : false,
+  entities: [__dirname + '/../**/*.entity{.js,.ts}'],
+  migrations: [__dirname + '/../migrations/*{.js,.ts}'],
+} as const;
 
 export default registerAs('typeorm', () => config);
-
-export const connectionSource = new DataSource(config as DataSourceOptions);
+export const connectionSource = new DataSource(config as unknown as DataSourceOptions);
