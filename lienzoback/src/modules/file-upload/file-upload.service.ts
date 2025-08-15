@@ -51,6 +51,11 @@ export class FileUploadService {
 
     // Retornar producto actualizado
     const updatedProduct = await this.productsRepository.findOneBy({ id: productId });
+    if (!updatedProduct) {
+      this.logger.error(`❌ No se pudo encontrar el producto actualizado con ID: ${productId}`);
+      throw new NotFoundException(`No se pudo encontrar el producto actualizado con ID: ${productId}`);
+    }
+    
     this.logger.log(`✅ Producto actualizado con imagen: ${updatedProduct.name}`);
     
     return updatedProduct;

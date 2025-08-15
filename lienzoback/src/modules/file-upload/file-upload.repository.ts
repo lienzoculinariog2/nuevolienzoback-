@@ -34,6 +34,11 @@ export class FileUploadRepository {
             return reject(new InternalServerErrorException(`Error al subir imagen: ${error.message}`));
           }
           
+          if (!result) {
+            this.logger.error('❌ Cloudinary no retornó resultado');
+            return reject(new InternalServerErrorException('Error: Cloudinary no retornó resultado'));
+          }
+          
           this.logger.log('✅ Upload exitoso a Cloudinary:', {
             public_id: result.public_id,
             secure_url: result.secure_url,
