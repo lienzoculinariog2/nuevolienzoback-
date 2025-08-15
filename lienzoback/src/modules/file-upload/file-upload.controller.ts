@@ -30,6 +30,11 @@ export class FileUploadController {
   testCloudinaryConfig() {
     this.logger.log('🔍 Verificando configuración de Cloudinary...');
     
+    // Log detallado de las variables
+    this.logger.log(`🌥️ CLOUDINARY_CLOUD_NAME: ${process.env.CLOUDINARY_CLOUD_NAME || 'NO CONFIGURADO'}`);
+    this.logger.log(`🔑 CLOUDINARY_API_KEY: ${process.env.CLOUDINARY_API_KEY ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
+    this.logger.log(`🔐 CLOUDINARY_API_SECRET: ${process.env.CLOUDINARY_API_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
+    
     const config = {
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY ? 'Configurado' : 'No configurado',
