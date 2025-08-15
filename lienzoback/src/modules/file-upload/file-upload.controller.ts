@@ -51,4 +51,18 @@ export class FileUploadController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('test/health')
+  @ApiOperation({ summary: 'Verificar salud del módulo de file-upload' })
+  @ApiResponse({ status: 200, description: 'Estado del módulo' })
+  testHealth() {
+    this.logger.log('🏥 Verificando salud del módulo de file-upload...');
+    
+    return {
+      status: 'success',
+      message: 'Módulo de file-upload funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+    };
+  }
 }

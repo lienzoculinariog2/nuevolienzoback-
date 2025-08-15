@@ -4,10 +4,13 @@ import { v2 as cloudinary } from 'cloudinary';
 @Injectable()
 export class CloudinaryConfig {
   private readonly logger = new Logger(CloudinaryConfig.name);
+  private isConfigured = false;
 
   constructor() {
     this.validateCloudinaryConfig();
-    this.configureCloudinary();
+    if (this.isConfigured) {
+      this.configureCloudinary();
+    }
   }
 
   private validateCloudinaryConfig(): void {
@@ -20,10 +23,12 @@ export class CloudinaryConfig {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
-      this.logger.error(`❌ Variables de entorno de Cloudinary faltantes: ${missingVars.join(', ')}`);
-      this.logger.warn('⚠️  La subida de imágenes no funcionará correctamente');
+      this.logger.warn(`⚠️ Variables de entorno de Cloudinary faltantes: ${missingVars.join(', ')}`);
+      this.logger.warn('⚠️ La subida de imágenes no funcionará. Configure las variables en Render.');
+      this.isConfigured = false;
     } else {
       this.logger.log('✅ Todas las variables de entorno de Cloudinary están configuradas');
+      this.isConfigured = true;
     }
   }
 
@@ -41,11 +46,18 @@ export class CloudinaryConfig {
       this.logger.log(`🔐 API Secret: ${process.env.CLOUDINARY_API_SECRET ? 'Configurado' : 'No configurado'}`);
     } catch (error) {
       this.logger.error('❌ Error al configurar Cloudinary:', error);
-      throw error;
+      this.isConfigured = false;
     }
   }
 
   public getCloudinaryInstance() {
+    if (!this.isConfigured) {
+      throw new Error('Cloudinary no está configurado. Configure las variables de entorno.');
+    }
     return cloudinary;
+  }
+
+  public isCloudinaryConfigured(): boolean {
+    return this.isConfigured;
   }
 }
