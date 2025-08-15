@@ -60,7 +60,11 @@ export class FileUploadRepository {
 
     if (missingVars.length > 0) {
       this.logger.error(`❌ Variables de entorno de Cloudinary faltantes: ${missingVars.join(', ')}`);
-      throw new InternalServerErrorException('Configuración de Cloudinary incompleta');
+      this.logger.warn('⚠️  La subida de imágenes no funcionará. Configure las variables en Render.');
+      throw new InternalServerErrorException(
+        `Configuración de Cloudinary incompleta. Variables faltantes: ${missingVars.join(', ')}. ` +
+        'Configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en Render.'
+      );
     }
 
     this.logger.log('✅ Configuración de Cloudinary validada');
