@@ -15,6 +15,9 @@ export class FileUploadService {
 
   // Asegúrate que esta función recibe los 2 parámetros: file y productId
   async uploadImage(file: Express.Multer.File, productId: string): Promise<Products | null> {
+    console.log('Iniciando upload de imagen para producto:', productId);
+    console.log('Archivo recibido:', file.originalname, 'Tamaño:', file.size, 'bytes');
+
     const product = await this.productsRepository.findOneBy({ id: productId });
 
     if (!product) {
@@ -23,16 +26,20 @@ export class FileUploadService {
 
     let uploadResponse;
     try {
+      console.log('Subiendo imagen a Cloudinary...');
       uploadResponse = await this.fileUploadRepository.uploadImage(file);
+      console.log('Respuesta de Cloudinary:', uploadResponse);
     } catch (error) {
       console.error('Upload Error:', error);
       throw new InternalServerErrorException('Failed to upload image');
     }
 
     try {
+      console.log('Actualizando URL de imagen en base de datos...');
       await this.productsRepository.update(product.id, {
         imgUrl: uploadResponse.secure_url,
       });
+      console.log('URL de imagen actualizada exitosamente');
     } catch (error) {
       console.error('Database Update Error:', error);
       throw new InternalServerErrorException('Failed to update product image URL');

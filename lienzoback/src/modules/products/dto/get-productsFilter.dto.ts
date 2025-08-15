@@ -31,7 +31,7 @@ export class GetProductsFilterDto {
   @IsUUID()
   categoryId?: string;
 
-  @ApiPropertyOptional({ example: 'price', description: 'Campo por el cual ordenar', enum: ['name', 'price', 'stock', 'caloricLevel'] })
+  @ApiPropertyOptional({ example: 'salmón', description: 'Buscar productos que contengan este ingrediente' })
   @IsOptional()
   @IsString()
   ingredient?: string;

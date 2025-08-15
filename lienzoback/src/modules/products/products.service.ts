@@ -58,6 +58,7 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
+    // Validar categoría
     const category = await this.categoriesRepository.findOneBy({
       id: dto.categoryId,
     });
@@ -65,6 +66,7 @@ export class ProductsService {
       throw new NotFoundException(`Categoría con ID ${dto.categoryId} no encontrada.`);
     }
 
+    // Validar nombre único
     const existingProduct = await this.productsRepository.findOne({
       where: { name: dto.name },
     });
@@ -72,14 +74,18 @@ export class ProductsService {
       throw new ConflictException(`Ya existe un producto con el nombre "${dto.name}".`);
     }
 
+    // Procesar ingredientes - crear si no existen
     const ingredients: Ingredients[] = [];
     if (dto.ingredients && dto.ingredients.length > 0) {
+      console.log('Procesando ingredientes:', dto.ingredients);
       for (const ingredientName of dto.ingredients) {
         const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
         ingredients.push(ingredient);
+        console.log(`Ingrediente procesado: ${ingredient.name} (ID: ${ingredient.id})`);
       }
     }
 
+    // Crear el producto
     const product = this.productsRepository.create({
       name: dto.name,
       description: dto.description,
@@ -93,11 +99,21 @@ export class ProductsService {
     });
 
     const savedProduct = await this.productsRepository.save(product);
+    console.log('Producto creado con ID:', savedProduct.id);
 
+    // Procesar imagen si se proporciona
     if (file) {
-      await this.fileUploadService.uploadImage(file, savedProduct.id);
+      console.log('Procesando imagen:', file.originalname);
+      try {
+        await this.fileUploadService.uploadImage(file, savedProduct.id);
+        console.log('Imagen subida exitosamente');
+      } catch (error) {
+        console.error('Error al subir imagen:', error);
+        // No lanzamos error aquí para no fallar la creación del producto
+      }
     }
 
+    // Retornar producto con relaciones
     return this.productsRepository.findOneOrFail({
       where: { id: savedProduct.id },
       relations: ['category', 'ingredients'],
@@ -138,18 +154,29 @@ export class ProductsService {
     if (isActive !== undefined) {
       query.andWhere('product.isActive = :isActive', { isActive });
     }
+    
+    // Filtro mejorado por ingredientes
     if (ingredient) {
-      query.andWhere('LOWER(ingredients.name) LIKE LOWER(:ingredientName)', {
+      query.andWhere('ingredients.name ILIKE :ingredientName', {
         ingredientName: `%${ingredient}%`,
       });
+      // Asegurar que solo se incluyan productos que tengan ingredientes
+      query.andWhere('ingredients.id IS NOT NULL');
     }
+
+    // Ordenamiento
     if (sortBy) {
       const orderDirection = order.toUpperCase() as 'ASC' | 'DESC';
       query.orderBy(`product.${sortBy}`, orderDirection);
     } else {
       query.orderBy('product.name', 'ASC');
     }
+
+    // Paginación
     query.skip((page - 1) * limit).take(limit);
+
+    console.log('Query SQL generada:', query.getSql());
+    console.log('Parámetros:', query.getParameters());
 
     return await query.getMany();
   }
@@ -222,5 +249,9 @@ export class ProductsService {
     }
     productToInactivate.isActive = false;
     return this.productsRepository.save(productToInactivate);
+  }
+
+  async getIngredientsForTest() {
+    return this.ingredientsService.findAll();
   }
 }

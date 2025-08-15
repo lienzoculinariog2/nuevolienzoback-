@@ -56,6 +56,12 @@ export class ProductsController {
     @Body(new ValidationPipe({ transform: true })) createProductDto: CreateProductDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    console.log('Endpoint create llamado con:', {
+      productData: createProductDto,
+      hasFile: !!file,
+      fileName: file?.originalname,
+      fileSize: file?.size
+    });
     return this.productsService.create(createProductDto, file);
   }
 
@@ -66,6 +72,7 @@ export class ProductsController {
   @ApiQuery({ name: 'price_max', required: false, description: 'Precio máximo', type: Number })
   @ApiQuery({ name: 'isActive', required: false, description: 'Filtrar por estado activo', type: Boolean })
   @ApiQuery({ name: 'categoryId', required: false, description: 'Filtrar por categoría', type: String, format: 'uuid' })
+  @ApiQuery({ name: 'ingredient', required: false, description: 'Buscar productos que contengan este ingrediente' })
   @ApiQuery({ name: 'sortBy', required: false, description: 'Campo de ordenación', enum: ['name', 'price', 'stock', 'caloricLevel'] })
   @ApiQuery({ name: 'order', required: false, description: 'Dirección de orden', enum: ['asc', 'desc'] })
   @ApiQuery({ name: 'page', required: false, description: 'Número de página', type: Number })
@@ -186,5 +193,11 @@ export class ProductsController {
   @ApiResponse({ status: 409, description: 'No se puede inactivar porque tiene stock o pedidos activos' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
+  }
+
+  @Get('test/ingredients')
+  @ApiOperation({ summary: 'Obtener todos los ingredientes disponibles' })
+  async getIngredients() {
+    return this.productsService.getIngredientsForTest();
   }
 }

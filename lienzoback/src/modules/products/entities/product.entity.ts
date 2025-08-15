@@ -76,5 +76,8 @@ export class Products {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.product)
   cartItems: CartItem[];
+
+  @OneToMany(() => Reviews, (review) => review.product)
+  reviews: Reviews[];
 }
 
