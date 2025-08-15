@@ -149,4 +149,16 @@ export class CategoriesService {
 
     return { message: 'Category inactivated successfully.', category: categoryToInactivate };
   }
+
+  async activate(id: string) {
+    const categoryToactivate = await this.categoriesRepository.findOne({ where: { id } });
+
+    if (!categoryToactivate) {
+      throw new NotFoundException(`Category with id ${id} not found`);
+    }
+
+    categoryToactivate.isActive = true;
+    await this.categoriesRepository.save(categoryToactivate);
+    return { message: 'Category successfully activated .', category: categoryToactivate };
+  }
 }
