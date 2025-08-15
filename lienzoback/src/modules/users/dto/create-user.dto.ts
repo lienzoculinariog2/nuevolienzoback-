@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -6,8 +6,8 @@ export class CreateUserDto {
   auth0Id: string;
 
   @IsString()
-  @IsNotEmpty()
-  name: string;
+  @IsOptional() // <-- Con esto, el campo 'name' es opcional
+  name?: string;
 
   @IsEmail()
   @IsNotEmpty()
