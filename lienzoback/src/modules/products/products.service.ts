@@ -11,6 +11,7 @@ import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { Ingredients } from '../ingredients/entities/ingredient.entity';
+import { CategoriesService } from '../categories/categories.service';
 
 @Injectable()
 export class ProductsService {
@@ -24,6 +25,7 @@ export class ProductsService {
     @InjectRepository(Ingredients)
     private readonly ingredientsRepository: Repository<Ingredients>,
     private readonly fileUploadService: FileUploadService,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   async isPopulated(): Promise<boolean> {
@@ -62,6 +64,9 @@ export class ProductsService {
     });
     if (!category) {
       throw new NotFoundException(`Categoría con ID ${dto.categoryId} no encontrada.`);
+    }
+    if (!category.isActive) {
+      await this.categoriesService.activate(dto.categoryId);
     }
 
     const existingProduct = await this.productsRepository.findOne({
@@ -122,7 +127,7 @@ export class ProductsService {
       sortBy,
       order = 'asc',
       page = 1,
-      limit = 10,
+      limit = 12,
     } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');
@@ -188,11 +193,13 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }
-
     if (categoryId) {
       const category = await this.categoriesRepository.findOneBy({ id: categoryId });
       if (!category) {
         throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada.`);
+      }
+      if (!category.isActive) {
+        await this.categoriesService.activate(categoryId);
       }
       product.category = category;
     }
