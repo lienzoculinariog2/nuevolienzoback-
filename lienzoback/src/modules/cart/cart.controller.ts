@@ -1,54 +1,71 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Put,
-  Delete,
-  Req,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/addTo-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { Cart } from './entities/cart.entity';
+import { CartSummaryDto } from './dto/cart-summary.dto';
+import { Orders } from '../orders/entities/order.entity';
+import { CheckoutDto } from './dto/checkout.dto';
+import { TemporaryCartDto } from './dto/temporary-cart.dto';
 
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Get()
-  async getCart(@Param('id', ParseUUIDPipe) id: string): Promise<Cart> {
-    return this.cartService.getCart(id);
+  @Get(':userId')
+  async getCart(@Param('userId', ParseUUIDPipe) userId: string): Promise<Cart> {
+    return this.cartService.getCart(userId);
   }
 
-  @Get('active')
+  @Get()
   async findAllActiveCarts() {
     return this.cartService.findAllActive();
   }
 
-  @Post()
-  async addToCart(@Req() req, @Body() addToCartDto: AddToCartDto): Promise<Cart> {
-    return this.cartService.addToCart(req.user.id, addToCartDto);
+  @Post(':userId')
+  async addToCart(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() addToCartDto: AddToCartDto,
+  ): Promise<CartSummaryDto> {
+    return this.cartService.addToCart(userId, addToCartDto);
   }
 
-  @Put(':itemId')
-  async updateCartItem(
-    @Req() req,
-    @Param('itemId') itemId: string,
-    @Body() updateCartDto: UpdateCartDto,
+  // @Put(':userId')
+  // async updateCartItems(
+  //   @Param('userId', ParseUUIDPipe) userId: string,
+  //   @Body() updateCartDto: UpdateCartDto,
+  // ): Promise<Cart | null> {
+  //   return this.cartService.updateCartItems(userId, updateCartDto);
+  // }
+
+  @Delete('item/:userId/:itemId')
+  async removeCartItem(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<Cart> {
-    return this.cartService.updateCartItem(req.user.id, itemId, updateCartDto);
+    return this.cartService.removeCartItem(userId, itemId);
   }
 
-  @Delete(':itemId')
-  async removeCartItem(@Req() req, @Param('itemId') itemId: string): Promise<Cart> {
-    return this.cartService.removeCartItem(req.user.id, itemId);
+  @Delete(':userId')
+  async clearCart(@Param('userId', ParseUUIDPipe) userId: string): Promise<void> {
+    return this.cartService.clearCart(userId);
   }
 
-  @Delete()
-  async clearCart(@Req() req): Promise<void> {
-    return this.cartService.clearCart(req.user.id);
+  // Nuevo: Endpoint para fusionar carritos de usuarios no logueados
+  @Post('merge-cart/:userId')
+  async mergeCarts(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() temporaryCartDto: TemporaryCartDto,
+  ): Promise<Cart> {
+    return this.cartService.mergeCarts(userId, temporaryCartDto);
+  }
+
+  // Nuevo: Endpoint para el proceso de checkout
+  @Post('checkout/:userId')
+  async checkout(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() checkoutDto: CheckoutDto,
+  ): Promise<Orders> {
+    return this.cartService.checkout(userId, checkoutDto);
   }
 }

@@ -12,7 +12,7 @@ import { ProductsService } from './modules/products/products.service';
 import { OrdersModule } from './modules/orders/orders.module';
 import { DiscountCodesModule } from './modules/discount-codes/discount-codes.module';
 import { ReviewsModule } from './modules/product-review/reviews.module';
-//import { CartModule } from './modules/cart/cart.module';
+import { CartModule } from './modules/cart/cart.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { IngredientsService } from './modules/ingredients/ingredients.service';
 
@@ -38,12 +38,13 @@ import { IngredientsService } from './modules/ingredients/ingredients.service';
     ReviewsModule,
     DiscountCodesModule,
     IngredientsModule,
-    //CartModule,
+    CartModule,
   ],
   controllers: [],
   providers: [],
 })
 export class AppModule implements OnModuleInit {
+  usersServiceService: any;
   constructor(
     private readonly categoriesService: CategoriesService,
     private readonly productsService: ProductsService,
