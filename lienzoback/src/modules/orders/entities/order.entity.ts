@@ -30,6 +30,9 @@ export class Orders {
   @Column({ name: 'is_paid', default: false })
   isPaid: boolean;
 
+  @Column({ name: 'shipping_address', nullable: true })
+  shippingAddress: string;
+
   @ManyToOne(() => Users, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })
   user: Users;

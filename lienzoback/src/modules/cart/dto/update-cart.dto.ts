@@ -1,4 +1,17 @@
-import { PartialType } from '@nestjs/swagger';
-import { AddToCartDto } from './addTo-cart.dto';
+import { Type } from 'class-transformer';
+import { IsUUID, IsNumber, IsPositive, IsArray, ValidateNested } from 'class-validator';
 
-export class UpdateCartDto extends PartialType(AddToCartDto) {}
+export class UpdateCartItemDto {
+  @IsUUID()
+  itemId: string;
+
+  @IsNumber()
+  quantity: number;
+}
+
+export class UpdateCartDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateCartItemDto)
+  updates: UpdateCartItemDto[];
+}
