@@ -69,8 +69,7 @@ export class Products {
   @ManyToOne(() => Categories, (category) => category.product)
   @JoinColumn({ name: 'category_id' })
   category: Categories;
-  orderDetails: any;
-  reviews: any;
+  
 
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
   orderDetails: OrderDetail[];
