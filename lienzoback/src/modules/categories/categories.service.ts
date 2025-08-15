@@ -129,18 +129,19 @@ export class CategoriesService {
 
   async inactivate(id: string) {
     const categoryToInactivate = await this.categoriesRepository.findOne({ where: { id } });
-
     if (!categoryToInactivate) {
       throw new NotFoundException(`Category with id ${id} not found`);
     }
-
-    const productsCount = await this.productsRepository.count({
-      where: { category: categoryToInactivate },
+    const activeProductsCount = await this.productsRepository.count({
+      where: {
+        category: { id: categoryToInactivate.id },
+        isActive: true,
+      },
     });
 
-    if (productsCount > 0) {
+    if (activeProductsCount > 0) {
       throw new ConflictException(
-        `Category cannot be inactivated, ${productsCount} products are still assigned to this category.`,
+        `Category cannot be inactivated, ${activeProductsCount} active products are still assigned to this category.`,
       );
     }
 
