@@ -147,6 +147,7 @@ export class ProductsController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Actualizar un producto por ID' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
     description: 'Producto actualizado',
@@ -171,8 +172,20 @@ export class ProductsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto);
+  @UseInterceptors(FileInterceptor('image'))
+  update(
+    @Param('id', ParseUUIDPipe) id: string, 
+    @Body(new ValidationPipe({ transform: true })) updateProductDto: UpdateProductDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    console.log('Endpoint update llamado con:', {
+      productId: id,
+      productData: updateProductDto,
+      hasFile: !!file,
+      fileName: file?.originalname,
+      fileSize: file?.size
+    });
+    return this.productsService.update(id, updateProductDto, file);
   }
 
   @Put('inactivate/:id')
@@ -193,6 +206,25 @@ export class ProductsController {
   @ApiResponse({ status: 409, description: 'No se puede inactivar porque tiene stock o pedidos activos' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
+  }
+
+  @Put('activate/:id')
+  @ApiOperation({ summary: 'Activar un producto' })
+  @ApiResponse({
+    status: 200,
+    description: 'Producto activado',
+    schema: {
+      example: {
+        id: 'uuid-product-id',
+        name: 'Pizza Margarita',
+        isActive: true,
+        stock: 10,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  activate(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.activateProduct(id);
   }
 
   @Get('test/ingredients')

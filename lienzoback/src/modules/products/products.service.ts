@@ -193,18 +193,19 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto): Promise<Products> {
+  async update(id: string, updateProductDto: UpdateProductDto, file?: Express.Multer.File): Promise<Products> {
     const { categoryId, ingredients, ...productData } = updateProductDto;
 
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: ['ingredients'],
+      relations: ['ingredients', 'category'],
     });
 
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }
 
+    // Validar categoría si se proporciona
     if (categoryId) {
       const category = await this.categoriesRepository.findOneBy({ id: categoryId });
       if (!category) {
@@ -212,14 +213,49 @@ export class ProductsService {
       }
       product.category = category;
     }
-    if (ingredients) {
-      const newIngredients = await Promise.all(
-        ingredients.map((name) => this.ingredientsService.findOrCreate(name)),
-      );
+
+    // Procesar ingredientes - crear si no existen
+    if (ingredients && ingredients.length > 0) {
+      console.log('Procesando ingredientes en update:', ingredients);
+      const newIngredients: Ingredients[] = [];
+      for (const ingredientName of ingredients) {
+        const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
+        newIngredients.push(ingredient);
+        console.log(`Ingrediente procesado en update: ${ingredient.name} (ID: ${ingredient.id})`);
+      }
       product.ingredients = newIngredients;
     }
+
+    // Actualizar datos del producto
     Object.assign(product, productData);
-    return this.productsRepository.save(product);
+
+    // Activar automáticamente si se agrega stock y el producto está inactivo
+    if (productData.stock !== undefined && productData.stock > 0 && !product.isActive) {
+      product.isActive = true;
+      console.log(`Producto ${product.name} activado automáticamente al agregar stock`);
+    }
+
+    // Guardar el producto
+    const savedProduct = await this.productsRepository.save(product);
+    console.log('Producto actualizado con ID:', savedProduct.id);
+
+    // Procesar imagen si se proporciona
+    if (file) {
+      console.log('Procesando imagen en update:', file.originalname);
+      try {
+        await this.fileUploadService.uploadImage(file, savedProduct.id);
+        console.log('Imagen actualizada exitosamente');
+      } catch (error) {
+        console.error('Error al actualizar imagen:', error);
+        // No lanzamos error aquí para no fallar la actualización del producto
+      }
+    }
+
+    // Retornar producto con relaciones actualizadas
+    return this.productsRepository.findOneOrFail({
+      where: { id: savedProduct.id },
+      relations: ['category', 'ingredients'],
+    });
   }
 
   async inactivateProduct(id: string): Promise<Products> {
@@ -249,6 +285,20 @@ export class ProductsService {
     }
     productToInactivate.isActive = false;
     return this.productsRepository.save(productToInactivate);
+  }
+
+  async activateProduct(id: string): Promise<Products> {
+    const productToActivate = await this.productsRepository.findOne({
+      where: { id },
+    });
+    if (!productToActivate) {
+      throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
+    }
+    
+    productToActivate.isActive = true;
+    console.log(`Producto ${productToActivate.name} activado exitosamente`);
+    
+    return this.productsRepository.save(productToActivate);
   }
 
   async getIngredientsForTest() {
