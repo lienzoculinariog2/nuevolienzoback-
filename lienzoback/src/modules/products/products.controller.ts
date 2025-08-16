@@ -10,6 +10,7 @@ import {
   ValidationPipe,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -23,12 +24,18 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('image')) // El nombre 'image' debe coincidir con el campo en form-data
+  @UseInterceptors(FileInterceptor('image'))
   create(
     @Body(new ValidationPipe({ transform: true })) createProductDto: CreateProductDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [],
+        fileIsRequired: false,
+      }),
+    )
+    file?: Express.Multer.File,
   ) {
-    console.log('Archivo recibido:', file); // Para verificar que llegue el archivo
+    console.log('Archivo recibido:', file);
     return this.productsService.create(createProductDto, file);
   }
 
@@ -56,7 +63,13 @@ export class ProductsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [],
+        fileIsRequired: false,
+      }),
+    )
+    file?: Express.Multer.File,
   ) {
     // Extrae los ingredientes del cuerpo y asegúrate de que sea un array
     const { ingredients, ...rest } = body;

@@ -9,11 +9,12 @@ import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import dataProducts from '../../data.Products.json';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
-import { FileUploadService } from '../file-upload/file-upload.service';
 import type { Express } from 'express';
 import { Ingredients } from '../ingredients/entities/ingredient.entity';
 import { IngredientsService } from '../ingredients/ingredients.service';
 import { PaginatedResponse } from './dto/paginated-response.interface';
+import { v2 as cloudinary } from 'cloudinary';
+import { config as dotenvconfig } from 'dotenv';
 
 @Injectable()
 export class ProductsService {
@@ -24,9 +25,43 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Categories>,
     @InjectRepository(OrderDetail)
     private readonly ordersDetailRepository: Repository<OrderDetail>,
-    private readonly fileUploadService: FileUploadService,
     private readonly ingredientsService: IngredientsService,
-  ) {}
+  ) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    console.log('✅ Cloudinary configurado en ProductsService');
+  }
+
+  // Método privado para subir la imagen a Cloudinary
+  private async uploadImage(file: Express.Multer.File, productId: string): Promise<string> {
+    // <-- CAMBIO 1: Agregado Promise<string>
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'auto',
+          folder: 'products',
+          public_id: productId,
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Error uploading image to Cloudinary:', error);
+            return reject(error);
+          }
+          if (result && result.secure_url) {
+            // <-- CAMBIO 1: Agregada validación de secure_url
+            resolve(result.secure_url); // <-- CAMBIO 1: Retorna directamente secure_url
+          } else {
+            reject(new Error('No se pudo obtener la URL de la imagen')); // <-- CAMBIO 1: Error específico
+          }
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
+  }
 
   async isPopulated(): Promise<boolean> {
     const productsCount = await this.productsRepository.count();
@@ -35,30 +70,34 @@ export class ProductsService {
 
   async seedProducts(): Promise<void> {
     const categories: Categories[] = await this.categoriesRepository.find();
-    const ingredients: Ingredients[] = await this.ingredientsService.findAll();
 
-    const productsToSeed = dataProducts.map((productData) => {
-      const category = categories.find((cat) => cat.name === productData.category.name);
-      if (!category) {
-        throw new NotFoundException(`Category ${productData.category.name} not found`);
-      }
+    const productsToSeed = await Promise.all(
+      dataProducts.map(async (productData) => {
+        const category = categories.find((cat) => cat.name === productData.category.name);
+        if (!category) {
+          throw new NotFoundException(`Category ${productData.category.name} not found`);
+        }
 
-      const ingredientsForProduct = productData.ingredients
-        .map((i) => ingredients.find((ing) => ing.name === i.name))
-        .filter(Boolean) as Ingredients[];
+        const ingredientsForProduct = await Promise.all(
+          productData.ingredients.map(async (ingredientData) => {
+            // Usa el método findOrCreate para asegurar que cada ingrediente existe
+            return await this.ingredientsService.findOrCreate(ingredientData.name);
+          }),
+        );
 
-      const newProduct = this.productsRepository.create({
-        ...productData,
-        category,
-        ingredients: ingredientsForProduct,
-      });
-      return newProduct;
-    });
+        const newProduct = this.productsRepository.create({
+          ...productData,
+          category,
+          ingredients: ingredientsForProduct,
+        });
+        return newProduct;
+      }),
+    );
 
     await this.productsRepository.save(productsToSeed, { chunk: 50 });
   }
 
-  async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
+  async create(dto: CreateProductDto, file?: Express.Multer.File): Promise<Products> {
     // Validar categoría
     const category = await this.categoriesRepository.findOneBy({
       id: dto.categoryId,
@@ -106,11 +145,12 @@ export class ProductsService {
     if (file) {
       console.log('Procesando imagen:', file.originalname);
       try {
-        await this.fileUploadService.uploadImage(file, savedProduct.id);
-        console.log('Imagen subida exitosamente');
+        const imageUrl = await this.uploadImage(file, savedProduct.id);
+        savedProduct.imgUrl = imageUrl;
+        await this.productsRepository.save(savedProduct);
+        console.log('URL de imagen actualizada en el producto:', savedProduct.imgUrl);
       } catch (error) {
         console.error('Error al subir imagen:', error);
-        // No lanzamos error aquí para no fallar la creación del producto
       }
     }
 
@@ -249,21 +289,21 @@ export class ProductsService {
       console.log(`Producto ${product.name} activado automáticamente al agregar stock`);
     }
 
-    // Guardar el producto
-    const savedProduct = await this.productsRepository.save(product);
-    console.log('Producto actualizado con ID:', savedProduct.id);
-
     // Procesar imagen si se proporciona
     if (file) {
       console.log('Procesando imagen en update:', file.originalname);
       try {
-        await this.fileUploadService.uploadImage(file, savedProduct.id);
+        const imageUrl = await this.uploadImage(file, product.id); // <-- CAMBIO 3: Usa this.uploadImage en lugar de fileUploadService
+        product.imgUrl = imageUrl; // <-- CAMBIO 3: Asigna la URL directamente
         console.log('Imagen actualizada exitosamente');
       } catch (error) {
         console.error('Error al actualizar imagen:', error);
-        // No lanzamos error aquí para no fallar la actualización del producto
       }
     }
+
+    // Guardar el producto
+    const savedProduct = await this.productsRepository.save(product);
+    console.log('Producto actualizado con ID:', savedProduct.id);
 
     // Retornar producto con relaciones actualizadas
     return this.productsRepository.findOneOrFail({
