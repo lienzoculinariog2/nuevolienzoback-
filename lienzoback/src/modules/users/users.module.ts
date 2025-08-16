@@ -1,4 +1,3 @@
-// src/users/users.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
@@ -7,11 +6,10 @@ import { Users } from './entities/user.entity';
 
 @Module({
   imports: [
-    // Importa el TypeOrmModule y proporciona la entidad Users
-    TypeOrmModule.forFeature([Users]),
+    TypeOrmModule.forFeature([Users]), // ⚠️ Se eliminó la coma de aquí
   ],
   controllers: [UsersController],
   providers: [UsersService],
-  exports: [UsersService], // Exporta el servicio si otros módulos lo necesitan
+  exports: [UsersService, TypeOrmModule],
 })
 export class UsersModule {}
