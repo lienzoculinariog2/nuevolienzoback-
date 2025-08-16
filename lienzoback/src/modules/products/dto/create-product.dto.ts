@@ -50,4 +50,8 @@ export class CreateProductDto {
   @IsOptional()
   @IsString({ each: true })
   ingredients?: string[];
+
+  @IsOptional()
+  @IsString()
+  imgUrl?: string;
 }
