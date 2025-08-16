@@ -13,6 +13,7 @@ import { FileUploadService } from '../file-upload/file-upload.service';
 import type { Express } from 'express';
 import { Ingredients } from '../ingredients/entities/ingredient.entity';
 import { IngredientsService } from '../ingredients/ingredients.service';
+import { PaginatedResponse } from './dto/paginated-response.interface';
 
 @Injectable()
 export class ProductsService {
@@ -120,7 +121,7 @@ export class ProductsService {
     });
   }
 
-  async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
+  async findAll(filterDto: GetProductsFilterDto): Promise<PaginatedResponse<Products>> {
     const {
       name,
       price_min,
@@ -176,12 +177,20 @@ export class ProductsService {
     // Paginación
     query.skip((page - 1) * limit).take(limit);
 
-    console.log('Query SQL generada:', query.getSql());
-    console.log('Parámetros:', query.getParameters());
+    const [products, total] = await query.getManyAndCount();
 
-    return await query.getMany();
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+
+    return {
+      data: products,
+      totalItems: total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+    };
   }
-
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },
