@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  InternalServerErrorException,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -12,13 +11,14 @@ import { Cart } from './entities/cart.entity';
 import { CartItem } from './entities/cart-item.entity';
 import { Products } from '../products/entities/product.entity';
 import { Users } from '../users/entities/user.entity';
-import { AddToCartDto } from './dto/addTo-cart.dto';
+import { AddSingleProductToCartDto } from './dto/add-single-product.dto';
+import { AddMultipleProductsToCartDto } from './dto/add-multiple-products.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
-import { CartSummaryDto } from './dto/cart-summary.dto';
 import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
-import { CheckoutDto } from './dto/checkout.dto';
+import { CheckoutDto } from './dto/check-out.dto';
 import { TemporaryCartDto } from './dto/temporary-cart.dto';
+import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 
 @Injectable()
 export class CartService {
@@ -38,189 +38,257 @@ export class CartService {
   ) {}
 
   async getCart(userId: string): Promise<Cart> {
-    let cart = await this.cartRepository.findOne({
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+    const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['items', 'items.product', 'user'],
+      relations: ['items', 'items.product', 'items.product.images'],
     });
 
     if (!cart) {
-      const user = await this.usersRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        throw new NotFoundException('User not found.');
-      }
-      cart = this.cartRepository.create({ user, isActive: false });
-      await this.cartRepository.save(cart);
+      throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
+
     return cart;
   }
 
-  async addToCart(userId: string, addToCartDto: AddToCartDto): Promise<CartSummaryDto> {
-    const cart = await this.getCart(userId);
+  async findAllActive() {
+    return this.cartRepository.find({
+      where: { isActive: true },
+      relations: ['items', 'items.product', 'items.product.images'],
+    });
+  }
 
-    for (const item of addToCartDto.products) {
-      const { productId, quantity } = item;
-      const product = await this.productsRepository.findOne({ where: { id: productId } });
+  async addSingleProductToCart(
+    userId: string,
+    addDto: AddSingleProductToCartDto,
+  ): Promise<FullCartSummaryDto> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
 
-      if (!product || !product.isActive) {
-        throw new NotFoundException(`Product with id ${productId} not found or not available.`);
-      }
-      if (product.stock < quantity) {
-        throw new BadRequestException(
-          `Not enough stock for product with id ${productId}, ${product.stock} available.`,
-        );
-      }
+    let cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
 
-      let cartItem = await this.cartItemRepository.findOne({
-        where: { cart: { id: cart.id }, product: { id: productId } },
+    if (!cart) {
+      cart = this.cartRepository.create({
+        user: user,
+        isActive: true,
+        items: [],
       });
+      await this.cartRepository.save(cart);
+    }
+
+    const { productId, quantity } = addDto;
+    const product = await this.productsRepository.findOneBy({ id: productId });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${productId} not found`);
+    }
+
+    if (product.stock < quantity) {
+      throw new BadRequestException(`Not enough stock for product with id ${productId}`);
+    }
+
+    let cartItem = cart.items.find((item) => item.product.id === productId);
+
+    if (cartItem) {
+      cartItem.quantity += quantity;
+      cartItem.price = product.price;
+    } else {
+      cartItem = this.cartItemRepository.create({
+        product: product,
+        quantity,
+        cart,
+        price: product.price,
+      });
+      cart.items.push(cartItem);
+    }
+
+    await this.cartItemRepository.save(cartItem);
+
+    const updatedCart = await this.cartRepository.findOne({
+      where: { id: cart.id },
+      relations: ['items', 'items.product'],
+    });
+
+    if (!updatedCart) {
+      throw new NotFoundException(`Cart with id ${cart.id} not found`);
+    }
+
+    return this.calculateCartSummary(updatedCart);
+  }
+
+  async addMultipleProductsToCart(
+    userId: string,
+    addMultipleDto: AddMultipleProductsToCartDto,
+  ): Promise<FullCartSummaryDto> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    let cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'items.product.images'],
+    });
+
+    if (!cart) {
+      cart = this.cartRepository.create({
+        user: user,
+        isActive: true,
+        items: [],
+      });
+      await this.cartRepository.save(cart);
+    }
+
+    for (const itemDto of addMultipleDto.products) {
+      const { productId, quantity } = itemDto;
+      const product = await this.productsRepository.findOneBy({
+        id: productId,
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+
+      if (product.stock < quantity) {
+        throw new BadRequestException(`Not enough stock for product with id ${productId}`);
+      }
+
+      let cartItem = cart.items.find((item) => item.product.id === productId);
 
       if (cartItem) {
         cartItem.quantity += quantity;
+        cartItem.price = product.price;
       } else {
         cartItem = this.cartItemRepository.create({
-          cart,
-          product,
+          product: product,
           quantity,
+          cart,
           price: product.price,
         });
+        cart.items.push(cartItem);
       }
       await this.cartItemRepository.save(cartItem);
     }
 
-    if (addToCartDto.products.length > 0 && !cart.isActive) {
-      cart.isActive = true;
-      await this.cartRepository.save(cart);
+    const updatedCart = await this.cartRepository.findOne({
+      where: { id: cart.id },
+      relations: ['items', 'items.product', 'items.product.images'],
+    });
+
+    if (!updatedCart) {
+      throw new NotFoundException(`Cart with id ${cart.id} not found`);
     }
 
-    const updatedCart = await this.getCart(userId);
     return this.calculateCartSummary(updatedCart);
   }
 
-  // async updateCartItems(
-  //   userId: string,
-  //   updateMultipleCartDto: UpdateCartDto,
-  // ): Promise<Cart | null> {
-  //   const cart = await this.getCart(userId);
-
-  //   for (const update of updateMultipleCartDto.updates) {
-  //     const { itemId, quantity } = update;
-
-  //     const cartItem = await this.cartItemRepository.findOne({
-  //       where: { id: itemId, cart: { id: cart.id } },
-  //       relations: ['product'],
-  //     });
-  //     if (!cartItem) {
-  //       throw new NotFoundException(`Cart item with id ${itemId} not found.`);
-  //     }
-  //     if (quantity === 0) {
-  //       await this.cartItemRepository.remove(cartItem);
-  //       continue;
-  //     }
-  //     if (cartItem.product.stock < quantity) {
-  //       throw new BadRequestException(
-  //         `Not enough stock available for product with id ${cartItem.product.id}. Only ${cartItem.product.stock} available.`,
-  //       );
-  //     }
-  //     cartItem.quantity = quantity;
-  //     await this.cartItemRepository.save(cartItem);
-  //   }
-  //   const updatedCart = await this.getCart(userId);
-  //   if (updatedCart && updatedCart.items.length === 0) {
-  //     await this.cartRepository.remove(updatedCart);
-  //     throw new HttpException('El carrito ha sido vaciado y eliminado con éxito.', HttpStatus.OK);
-  //   }
-  // }
-
-  async removeCartItem(userId: string, itemId: string): Promise<Cart> {
-    const cart = await this.getCart(userId);
-    const cartItem = await this.cartItemRepository.findOne({
-      where: { id: itemId, cart: { id: cart.id } },
+  async updateCartItems(userId: string, updateCartDto: UpdateCartDto): Promise<Cart | null> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
     });
 
+    if (!cart) {
+      throw new NotFoundException(`Cart for user with id ${userId} not found`);
+    }
+
+    for (const updateItem of updateCartDto.updates) {
+      const { itemId, quantity } = updateItem;
+      const cartItem = cart.items.find((item) => item.id === itemId);
+
+      if (!cartItem) {
+        throw new NotFoundException(`CartItem with ID ${itemId} not found`);
+      }
+
+      if (quantity <= 0) {
+        await this.cartItemRepository.delete(cartItem.id);
+        cart.items = cart.items.filter((item) => item.id !== itemId);
+      } else {
+        const product = await this.productsRepository.findOne({
+          where: { id: cartItem.product.id },
+        });
+
+        if (!product) {
+          throw new NotFoundException(`Product with ID ${cartItem.product.id} not found`);
+        }
+
+        if (product.stock < quantity) {
+          throw new BadRequestException(`Not enough stock for product with id ${product.id}`);
+        }
+
+        cartItem.quantity = quantity;
+        await this.cartItemRepository.save(cartItem);
+      }
+    }
+    return this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
+  }
+
+  async removeCartItem(userId: string, itemId: string): Promise<Cart> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
+    if (!cart) {
+      throw new NotFoundException(`Cart for user with id ${userId} not found`);
+    }
+    const cartItem = cart.items.find((item) => item.id === itemId);
+
     if (!cartItem) {
-      throw new NotFoundException('Cart item not found.');
+      throw new NotFoundException(`CartItem with ID ${itemId} not found`);
     }
-
     await this.cartItemRepository.remove(cartItem);
-    const updatedCart = await this.getCart(userId);
 
-    if (updatedCart.items.length === 0) {
-      updatedCart.isActive = false;
-      await this.cartRepository.save(updatedCart);
+    const updatedCart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
+    if (!updatedCart) {
+      throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
-
     return updatedCart;
   }
 
   async clearCart(userId: string): Promise<void> {
-    const cart = await this.getCart(userId);
-    if (cart.items && cart.items.length > 0) {
-      await this.cartItemRepository.remove(cart.items);
-    }
-    cart.isActive = false;
-    await this.cartRepository.save(cart);
-  }
-
-  async findAllActive(): Promise<Cart[]> {
-    return this.cartRepository.find({
-      where: {
-        isActive: true,
-      },
-      relations: ['items', 'items.product', 'user'],
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
     });
-  }
-
-  // Usuarios no logeados
-  async mergeCarts(userId: string, temporaryCartDto: TemporaryCartDto): Promise<Cart> {
-    const userCart = await this.getCart(userId);
-
-    for (const tempItem of temporaryCartDto.products) {
-      const { productId, quantity } = tempItem;
-      const product = await this.productsRepository.findOne({ where: { id: productId } });
-
-      if (!product || !product.isActive) {
-        continue;
-      }
-
-      const existingCartItem = userCart.items.find((item) => item.product.id === productId);
-
-      if (existingCartItem) {
-        existingCartItem.quantity += quantity;
-        await this.cartItemRepository.save(existingCartItem);
-      } else {
-        const newCartItem = this.cartItemRepository.create({
-          cart: userCart,
-          product,
-          quantity,
-          price: product.price,
-        });
-        await this.cartItemRepository.save(newCartItem);
-      }
+    if (!cart) {
+      throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
-
-    if (userCart.items.length > 0 && !userCart.isActive) {
-      userCart.isActive = true;
-      await this.cartRepository.save(userCart);
-    }
-
-    return this.getCart(userId);
+    await this.cartItemRepository.remove(cart.items);
   }
 
   async checkout(userId: string, checkoutDto: CheckoutDto): Promise<Orders> {
-    const cart = await this.getCart(userId);
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
 
-    if (!cart || !cart.items || cart.items.length === 0) {
-      throw new BadRequestException('The cart is empty.');
+    if (!cart || cart.items.length === 0) {
+      throw new BadRequestException('Cart is empty');
     }
-
     let subTotal = 0;
-
     for (const item of cart.items) {
-      const product = item.product;
+      const product = await this.productsRepository.findOne({
+        where: { id: item.product.id },
+      });
+      if (!product) {
+        throw new NotFoundException(`Product with id ${item.product.id} not found`);
+      }
       if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Not enough stock for product '${product.name}'. Only ${product.stock} available.`,
-        );
+        throw new BadRequestException(`Not enough stock for product with id ${product.id}`);
       }
       subTotal += item.quantity * product.price;
     }
@@ -263,16 +331,100 @@ export class CartService {
     }))!;
   }
 
-  private calculateCartSummary(cart: Cart): CartSummaryDto {
+  // Nuevo: Servicio para fusionar carritos
+  async mergeCarts(
+    userId: string,
+    temporaryCartDto: TemporaryCartDto,
+  ): Promise<FullCartSummaryDto> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    let cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'items.product.images'],
+    });
+
+    if (!cart) {
+      cart = this.cartRepository.create({
+        user: user,
+        isActive: true,
+        items: [],
+      });
+      await this.cartRepository.save(cart);
+    }
+
+    for (const itemDto of temporaryCartDto.products) {
+      const { productId, quantity } = itemDto;
+      const product = await this.productsRepository.findOneBy({
+        id: productId,
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+
+      if (product.stock < quantity) {
+        throw new BadRequestException(`Not enough stock for product with id ${productId}`);
+      }
+
+      let cartItem = cart.items.find((item) => item.product.id === productId);
+
+      if (cartItem) {
+        cartItem.quantity += quantity;
+        cartItem.price = product.price;
+      } else {
+        cartItem = this.cartItemRepository.create({
+          product: product,
+          quantity,
+          cart,
+          price: product.price,
+        });
+        cart.items.push(cartItem);
+      }
+      await this.cartItemRepository.save(cartItem);
+    }
+
+    const updatedCart = await this.cartRepository.findOne({
+      where: { id: cart.id },
+      relations: ['items', 'items.product', 'items.product.images'],
+    });
+
+    if (!updatedCart) {
+      throw new NotFoundException(`Cart with id ${cart.id} not found`);
+    }
+
+    return this.calculateCartSummary(updatedCart);
+  }
+
+  private calculateCartSummary(cart: Cart): FullCartSummaryDto {
     let subTotal = 0;
     let totalItems = 0;
 
-    if (cart && cart.items) {
-      for (const item of cart.items) {
-        subTotal += item.quantity * item.product.price;
-        totalItems += item.quantity;
-      }
-    }
-    return { totalItems, subTotal };
+    const itemsResponse = cart.items.map((item) => {
+      const totalItemPrice = item.quantity * item.product.price;
+      subTotal += totalItemPrice;
+      totalItems += item.quantity;
+
+      // Aquí está el cambio. Se asigna una URL por defecto
+      // si item.product.imgUrl es null o undefined.
+      const imgUrl = item.product.imgUrl ?? 'https://via.placeholder.com/150';
+
+      return {
+        id: item.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        imgUrl: imgUrl, // Usamos la nueva variable imgUrl
+        totalItemPrice: totalItemPrice,
+      };
+    });
+
+    return {
+      items: itemsResponse,
+      totalItems,
+      subTotal,
+    };
   }
 }
