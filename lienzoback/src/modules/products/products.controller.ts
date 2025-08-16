@@ -16,6 +16,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('products')
 export class ProductsController {
@@ -54,14 +55,51 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    // Extrae los ingredientes del cuerpo y asegúrate de que sea un array
+    const { ingredients, ...rest } = body;
+    const processedIngredients = Array.isArray(ingredients)
+      ? ingredients
+      : [ingredients].filter(Boolean);
+
+    // Crea un nuevo DTO para pasar al servicio
+    const updateProductDto: UpdateProductDto = {
+      ...rest,
+      ingredients: processedIngredients,
+    };
+
     return this.productsService.update(id, updateProductDto, file);
   }
 
   @Put('inactivate/:id')
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
+  }
+
+  @Put('activate/:id')
+  @ApiOperation({ summary: 'Activar un producto' })
+  @ApiResponse({
+    status: 200,
+    description: 'Producto activado',
+    schema: {
+      example: {
+        id: 'uuid-product-id',
+        name: 'Pizza Margarita',
+        isActive: true,
+        stock: 10,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  activate(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.activateProduct(id);
+  }
+
+  @Get('test/ingredients')
+  @ApiOperation({ summary: 'Obtener todos los ingredientes disponibles' })
+  async getIngredients() {
+    return this.productsService.getIngredientsForTest();
   }
 }
