@@ -1,41 +1,59 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Users } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Users, Roles, Diet } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
-    private usersRepository: Repository<Users>,
+    private readonly userRepository: Repository<Users>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Users> {
-    const newUser = this.usersRepository.create(createUserDto);
-    return this.usersRepository.save(newUser);
-  }
+    const existingUser = await this.userRepository.findOne({
+      where: { id: createUserDto.id },
+    });
 
-  async update(auth0Id: string, updateUserDto: UpdateUserDto): Promise<Users> {
-    const user = await this.usersRepository.findOne({ where: { auth0Id } });
-
-    if (!user) {
-      throw new NotFoundException(`User with Auth0 ID "${auth0Id}" not found`);
+    if (existingUser) {
+      return existingUser;
     }
 
-    // Aplica los cambios a la entidad del usuario
-    Object.assign(user, updateUserDto);
+    const newUser = this.userRepository.create(createUserDto);
 
-    // Guarda los cambios en la base de datos
-    return this.usersRepository.save(user);
+    newUser.name = createUserDto.email.split('@')[0];
+    newUser.address = '';
+    newUser.phone = 0;
+    newUser.birthday = new Date();
+    newUser.diet = Diet.GENERAL;
+    newUser.roles = Roles.CUSTOMER;
+    newUser.isSuscribed = false;
+
+    await this.userRepository.save(newUser);
+    return newUser;
   }
 
-  async findOneByAuth0Id(auth0Id: string): Promise<Users> {
-    const user = await this.usersRepository.findOne({ where: { auth0Id } });
+  async findOneById(id: string): Promise<Users> {
+    const user = await this.userRepository.findOne({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`User with Auth0 ID "${auth0Id}" not found`);
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
     }
+    return user;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<Users> {
+    const user = await this.userRepository.preload({
+      id: id,
+      ...updateUserDto,
+    });
+
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    await this.userRepository.save(user);
     return user;
   }
 }

@@ -1,13 +1,10 @@
 import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
+// import { Roles } from '../entities/user.entity'; // Comentamos esto temporalmente
 
 export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
-  auth0Id: string;
-
-  @IsString()
-  @IsNotEmpty()
-  name: string;
+  id: string;
 
   @IsEmail()
   @IsNotEmpty()

@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule,
+    // El PassportModule es suficiente para que la estrategia funcione
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({}),
+    ConfigModule,
   ],
+  // La estrategia es lo que realmente valida el token
   providers: [JwtStrategy],
   exports: [PassportModule],
 })
