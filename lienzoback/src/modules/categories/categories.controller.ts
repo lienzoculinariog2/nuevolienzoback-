@@ -40,7 +40,7 @@ export class CategoriesController {
     if (page && limit) {
       return this.categoriesService.findAll(+page, +limit);
     }
-    return this.categoriesService.findAll(1, 5);
+    return this.categoriesService.findAll(1, 15);
   }
 
   @Get(':id')
@@ -67,5 +67,10 @@ export class CategoriesController {
   @Put('inactivate/:id')
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.inactivate(id);
+  }
+
+  @Put('activate/:id')
+  activate(@Param('id', ParseUUIDPipe) id: string) {
+    return this.categoriesService.activate(id);
   }
 }

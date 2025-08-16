@@ -30,7 +30,7 @@
 //   @IsString({ each: true })
 //   ingredients?: string[];
 // }
-import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID, IsArray } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateProductDto {
@@ -60,7 +60,9 @@ export class CreateProductDto {
   @IsUUID()
   categoryId: string;
 
+  //modificado
+  @IsArray()
+  @IsUUID('all', { each: true })
   @IsOptional()
-  @IsString({ each: true })
-  ingredients?: string[];
+  ingredientIds?: string[];
 }
