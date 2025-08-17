@@ -88,12 +88,4 @@ export class CartController {
   ): Promise<Orders> {
     return this.cartService.checkout(userId, checkoutDto);
   }
-
-  @Post('mergecart/:userId')
-  mergeCarts(
-    @Param('userId', ParseUUIDPipe) userId: string,
-    @Body() temporaryCartDto: TemporaryCartDto,
-  ): Promise<FullCartSummaryDto> {
-    return this.cartService.mergeCarts(userId, temporaryCartDto);
-  }
 }
