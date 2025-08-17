@@ -48,7 +48,7 @@ export class Products {
   caloricLevel: number;
 
   @ManyToMany(() => Ingredients, (ingredient) => ingredient.products, {
-    cascade: true,
+    cascade: ['insert', 'update'],
   })
   @JoinTable({
     name: 'PRODUCTS_INGREDIENTS',

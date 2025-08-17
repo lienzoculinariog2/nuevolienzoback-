@@ -1,33 +1,59 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { HttpException, Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Users } from './entities/user.entity';
-import { CartService } from '../cart/cart.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { Users, Roles, Diet } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
-    private readonly usersRepository: Repository<Users>,
-    private readonly cartService: CartService,
+    private readonly userRepository: Repository<Users>,
   ) {}
 
-  async create(userData: Partial<Users>): Promise<Users> {
-    const existingUser = await this.usersRepository.findOne({
-      where: { email: userData.email },
+  async create(createUserDto: CreateUserDto): Promise<Users> {
+    const existingUser = await this.userRepository.findOne({
+      where: { id: createUserDto.id },
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email already exists.');
+      return existingUser;
     }
 
-    // 1. Crea una instancia del usuario.
-    const newUser = this.usersRepository.create(userData);
+    const newUser = this.userRepository.create(createUserDto);
 
-    // 2. Guarda el usuario para que se le asigne un ID.
-    await this.usersRepository.save(newUser);
+    newUser.name = createUserDto.email.split('@')[0];
+    newUser.address = '';
+    newUser.phone = 0;
+    newUser.birthday = new Date();
+    newUser.diet = Diet.GENERAL;
+    newUser.roles = Roles.CUSTOMER;
+    newUser.isSuscribed = false;
 
-    // 3. Crea el carrito y lo asocia al usuario recién creado.
+    await this.userRepository.save(newUser);
     return newUser;
+  }
+
+  async findOneById(id: string): Promise<Users> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+    return user;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<Users> {
+    const user = await this.userRepository.preload({
+      id: id,
+      ...updateUserDto,
+    });
+
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    await this.userRepository.save(user);
+    return user;
   }
 }
