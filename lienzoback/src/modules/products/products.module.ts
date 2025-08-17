@@ -16,6 +16,7 @@ import { CategoriesModule } from '../categories/categories.module';
     TypeOrmModule.forFeature([Categories, Products, Orders, OrderDetail, Ingredients]),
     FileUploadModule,
     CategoriesModule,
+    IngredientsModule,
   ],
   controllers: [ProductsController],
   providers: [ProductsService],
