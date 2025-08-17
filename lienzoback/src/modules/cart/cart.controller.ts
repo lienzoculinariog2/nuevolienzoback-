@@ -39,23 +39,23 @@ export class CartController {
     return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
   }
 
-  @Put('update/:userId')
+  @Put(':userId')
   async updateCartItems(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() updateCartDto: UpdateCartDto,
-  ): Promise<any> {
+  ): Promise<FullCartSummaryDto | null> {
     return this.cartService.updateCartItems(userId, updateCartDto);
   }
 
-  @Delete('item/:userId/:itemId')
+  @Delete(':userId/:itemId')
   removeCartItem(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-  ): Promise<Cart> {
+  ): Promise<FullCartSummaryDto> {
     return this.cartService.removeCartItem(userId, itemId);
   }
 
-  @Delete('empty/:userId')
+  @Delete(':userId')
   clearCart(@Param('userId', ParseUUIDPipe) userId: string): Promise<void> {
     return this.cartService.clearCart(userId);
   }
@@ -68,8 +68,7 @@ export class CartController {
     return this.cartService.checkout(userId, checkoutDto);
   }
 
-  // Nuevo: Endpoint para fusionar carritos de usuarios no logueados
-  @Post('merge-cart/:userId')
+  @Post('mergecart/:userId')
   mergeCarts(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() temporaryCartDto: TemporaryCartDto,
