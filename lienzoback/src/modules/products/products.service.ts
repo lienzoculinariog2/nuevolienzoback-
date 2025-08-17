@@ -9,8 +9,12 @@ import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import dataProducts from '../../data.Products.json';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
-import { FileUploadService } from '../file-upload/file-upload.service';
+import type { Express } from 'express';
 import { Ingredients } from '../ingredients/entities/ingredient.entity';
+import { IngredientsService } from '../ingredients/ingredients.service';
+import { PaginatedResponse } from './dto/paginated-response.interface';
+import { v2 as cloudinary } from 'cloudinary';
+import { config as dotenvconfig } from 'dotenv';
 
 @Injectable()
 export class ProductsService {
@@ -21,10 +25,43 @@ export class ProductsService {
     private readonly categoriesRepository: Repository<Categories>,
     @InjectRepository(OrderDetail)
     private readonly ordersDetailRepository: Repository<OrderDetail>,
-    @InjectRepository(Ingredients)
-    private readonly ingredientsRepository: Repository<Ingredients>,
-    private readonly fileUploadService: FileUploadService,
-  ) {}
+    private readonly ingredientsService: IngredientsService,
+  ) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    console.log('✅ Cloudinary configurado en ProductsService');
+  }
+
+  // Método privado para subir la imagen a Cloudinary
+  private async uploadImage(file: Express.Multer.File, productId: string): Promise<string> {
+    // <-- CAMBIO 1: Agregado Promise<string>
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'auto',
+          folder: 'products',
+          public_id: productId,
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Error uploading image to Cloudinary:', error);
+            return reject(error);
+          }
+          if (result && result.secure_url) {
+            // <-- CAMBIO 1: Agregada validación de secure_url
+            resolve(result.secure_url); // <-- CAMBIO 1: Retorna directamente secure_url
+          } else {
+            reject(new Error('No se pudo obtener la URL de la imagen')); // <-- CAMBIO 1: Error específico
+          }
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
+  }
 
   async isPopulated(): Promise<boolean> {
     const productsCount = await this.productsRepository.count();
@@ -33,30 +70,35 @@ export class ProductsService {
 
   async seedProducts(): Promise<void> {
     const categories: Categories[] = await this.categoriesRepository.find();
-    const ingredients: Ingredients[] = await this.ingredientsRepository.find();
 
-    const productsToSeed = dataProducts.map((productData) => {
-      const category = categories.find((cat) => cat.name === productData.category.name);
-      if (!category) {
-        throw new NotFoundException(`Category ${productData.category.name} not found`);
-      }
+    const productsToSeed = await Promise.all(
+      dataProducts.map(async (productData) => {
+        const category = categories.find((cat) => cat.name === productData.category.name);
+        if (!category) {
+          throw new NotFoundException(`Category ${productData.category.name} not found`);
+        }
 
-      const ingredientsForProduct = productData.ingredients
-        .map((i) => ingredients.find((ing) => ing.name === i.name))
-        .filter(Boolean) as Ingredients[];
+        const ingredientsForProduct = await Promise.all(
+          productData.ingredients.map(async (ingredientData) => {
+            // Usa el método findOrCreate para asegurar que cada ingrediente existe
+            return await this.ingredientsService.findOrCreate(ingredientData.name);
+          }),
+        );
 
-      const newProduct = this.productsRepository.create({
-        ...productData,
-        category,
-        ingredients: ingredientsForProduct,
-      });
-      return newProduct;
-    });
+        const newProduct = this.productsRepository.create({
+          ...productData,
+          category,
+          ingredients: ingredientsForProduct,
+        });
+        return newProduct;
+      }),
+    );
 
     await this.productsRepository.save(productsToSeed, { chunk: 50 });
   }
 
-  async create(dto: CreateProductDto, file: Express.Multer.File): Promise<Products> {
+  async create(dto: CreateProductDto, file?: Express.Multer.File): Promise<Products> {
+    // Validar categoría
     const category = await this.categoriesRepository.findOneBy({
       id: dto.categoryId,
     });
@@ -64,6 +106,7 @@ export class ProductsService {
       throw new NotFoundException(`Categoría con ID ${dto.categoryId} no encontrada.`);
     }
 
+    // Validar nombre único
     const existingProduct = await this.productsRepository.findOne({
       where: { name: dto.name },
     });
@@ -71,22 +114,18 @@ export class ProductsService {
       throw new ConflictException(`Ya existe un producto con el nombre "${dto.name}".`);
     }
 
+    // Procesar ingredientes - crear si no existen
     const ingredients: Ingredients[] = [];
-    if (dto.ingredientIds && dto.ingredientIds.length > 0) {
-      const foundIngredients = await this.ingredientsRepository.findBy({
-        id: In(dto.ingredientIds),
-      });
-
-      if (foundIngredients.length !== dto.ingredientIds.length) {
-        const foundIds = new Set(foundIngredients.map((i) => i.id));
-        const notFoundIds = dto.ingredientIds.filter((id) => !foundIds.has(id));
-        throw new NotFoundException(
-          `Los siguientes ingredientes no fueron encontrados: ${notFoundIds.join(', ')}`,
-        );
+    if (dto.ingredients && dto.ingredients.length > 0) {
+      console.log('Procesando ingredientes:', dto.ingredients);
+      for (const ingredientName of dto.ingredients) {
+        const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
+        ingredients.push(ingredient);
+        console.log(`Ingrediente procesado: ${ingredient.name} (ID: ${ingredient.id})`);
       }
-      ingredients.push(...foundIngredients);
     }
 
+    // Crear el producto
     const product = this.productsRepository.create({
       name: dto.name,
       description: dto.description,
@@ -100,18 +139,29 @@ export class ProductsService {
     });
 
     const savedProduct = await this.productsRepository.save(product);
+    console.log('Producto creado con ID:', savedProduct.id);
 
+    // Procesar imagen si se proporciona
     if (file) {
-      await this.fileUploadService.uploadImage(file, savedProduct.id);
+      console.log('Procesando imagen:', file.originalname);
+      try {
+        const imageUrl = await this.uploadImage(file, savedProduct.id);
+        savedProduct.imgUrl = imageUrl;
+        await this.productsRepository.save(savedProduct);
+        console.log('URL de imagen actualizada en el producto:', savedProduct.imgUrl);
+      } catch (error) {
+        console.error('Error al subir imagen:', error);
+      }
     }
 
+    // Retornar producto con relaciones
     return this.productsRepository.findOneOrFail({
       where: { id: savedProduct.id },
       relations: ['category', 'ingredients'],
     });
   }
 
-  async findAll(filterDto: GetProductsFilterDto): Promise<Products[]> {
+  async findAll(filterDto: GetProductsFilterDto): Promise<PaginatedResponse<Products>> {
     const {
       name,
       price_min,
@@ -131,7 +181,8 @@ export class ProductsService {
 
     // --- SECCIÓN DE FILTROS ---
     if (categoryId) {
-      query.andWhere('product.category_id = :categoryId', { categoryId });
+      // 💡 CORRECCIÓN: Usar el alias de la tabla unida 'category'
+      query.andWhere('category.id = :categoryId', { categoryId });
     }
     if (name) {
       query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
@@ -145,26 +196,45 @@ export class ProductsService {
     if (isActive !== undefined) {
       query.andWhere('product.isActive = :isActive', { isActive });
     }
+
+    // Filtro mejorado por ingredientes
     if (ingredient) {
-      query.andWhere('LOWER(ingredients.name) LIKE LOWER(:ingredientName)', {
+      query.andWhere('ingredients.name ILIKE :ingredientName', {
         ingredientName: `%${ingredient}%`,
       });
+      // Asegurar que solo se incluyan productos que tengan ingredientes
+      query.andWhere('ingredients.id IS NOT NULL');
     }
+
+    // Ordenamiento
     if (sortBy) {
       const orderDirection = order.toUpperCase() as 'ASC' | 'DESC';
       query.orderBy(`product.${sortBy}`, orderDirection);
     } else {
       query.orderBy('product.name', 'ASC');
     }
+
+    // Paginación
     query.skip((page - 1) * limit).take(limit);
 
-    return await query.getMany();
-  }
+    const [products, total] = await query.getManyAndCount();
 
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+
+    return {
+      data: products,
+      totalItems: total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+    };
+  }
   async getProductById(id: string): Promise<Products | null> {
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: ['category', 'ingredients'], // Incluir ingredientes
+      relations: ['category', 'ingredients'],
     });
 
     if (!product) {
@@ -176,19 +246,20 @@ export class ProductsService {
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
-    file: Express.Multer.File,
+    file?: Express.Multer.File,
   ): Promise<Products> {
-    const { categoryId, ingredientIds, ...productData } = updateProductDto;
+    const { categoryId, ingredients, ...productData } = updateProductDto;
 
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: ['ingredients'],
+      relations: ['ingredients', 'category'],
     });
 
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
     }
 
+    // Validar categoría si se proporciona
     if (categoryId) {
       const category = await this.categoriesRepository.findOneBy({ id: categoryId });
       if (!category) {
@@ -197,27 +268,46 @@ export class ProductsService {
       product.category = category;
     }
 
-    if (ingredientIds) {
-      const foundIngredients = await this.ingredientsRepository.findBy({ id: In(ingredientIds) });
-      if (foundIngredients.length !== ingredientIds.length) {
-        const foundIds = new Set(foundIngredients.map((i) => i.id));
-        const notFoundIds = ingredientIds.filter((id) => !foundIds.has(id));
-        throw new NotFoundException(
-          `Los siguientes ingredientes no fueron encontrados: ${notFoundIds.join(', ')}`,
-        );
+    // Procesar ingredientes - crear si no existen
+    if (ingredients && ingredients.length > 0) {
+      console.log('Procesando ingredientes en update:', ingredients);
+      const newIngredients: Ingredients[] = [];
+      for (const ingredientName of ingredients) {
+        const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
+        newIngredients.push(ingredient);
+        console.log(`Ingrediente procesado en update: ${ingredient.name} (ID: ${ingredient.id})`);
       }
-      product.ingredients = foundIngredients;
+      product.ingredients = newIngredients;
     }
 
-    if (file) {
-      await this.fileUploadService.uploadImage(file, product.id);
-    }
-
+    // Actualizar datos del producto
     Object.assign(product, productData);
-    await this.productsRepository.save(product);
 
+    // Activar automáticamente si se agrega stock y el producto está inactivo
+    if (productData.stock !== undefined && productData.stock > 0 && !product.isActive) {
+      product.isActive = true;
+      console.log(`Producto ${product.name} activado automáticamente al agregar stock`);
+    }
+
+    // Procesar imagen si se proporciona
+    if (file) {
+      console.log('Procesando imagen en update:', file.originalname);
+      try {
+        const imageUrl = await this.uploadImage(file, product.id); // <-- CAMBIO 3: Usa this.uploadImage en lugar de fileUploadService
+        product.imgUrl = imageUrl; // <-- CAMBIO 3: Asigna la URL directamente
+        console.log('Imagen actualizada exitosamente');
+      } catch (error) {
+        console.error('Error al actualizar imagen:', error);
+      }
+    }
+
+    // Guardar el producto
+    const savedProduct = await this.productsRepository.save(product);
+    console.log('Producto actualizado con ID:', savedProduct.id);
+
+    // Retornar producto con relaciones actualizadas
     return this.productsRepository.findOneOrFail({
-      where: { id: product.id },
+      where: { id: savedProduct.id },
       relations: ['category', 'ingredients'],
     });
   }
@@ -249,5 +339,23 @@ export class ProductsService {
     }
     productToInactivate.isActive = false;
     return this.productsRepository.save(productToInactivate);
+  }
+
+  async activateProduct(id: string): Promise<Products> {
+    const productToActivate = await this.productsRepository.findOne({
+      where: { id },
+    });
+    if (!productToActivate) {
+      throw new NotFoundException(`Producto con ID ${id} no encontrado.`);
+    }
+
+    productToActivate.isActive = true;
+    console.log(`Producto ${productToActivate.name} activado exitosamente`);
+
+    return this.productsRepository.save(productToActivate);
+  }
+
+  async getIngredientsForTest() {
+    return this.ingredientsService.findAll();
   }
 }

@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  PrimaryColumn,
 } from 'typeorm';
 import { Orders } from 'src/modules/orders/entities/order.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
@@ -13,36 +14,58 @@ import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-
 import { Categories } from 'src/modules/categories/entities/category.entity';
 import { Cart } from 'src/modules/cart/entities/cart.entity';
 
-export enum Roles {
-  ADMIN = 'admin',
-  USER = 'user',
-  GUEST = 'guest',
+export enum Diet {
+  GENERAL = 'general',
+  VEGETARIANO = 'vegetariano',
+  CELIACO = 'celiaco',
+  FITNESS = 'fitness',
 }
 
-@Entity({ name: 'USERS' })
+export enum Roles {
+  CUSTOMER = 'user',
+  ADMIN = 'admin',
+}
+
+@Entity({ name: 'users' })
 export class Users {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn()
   id: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: false })
+  @Column({ nullable: true })
   name: string;
 
-  @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
+  @Column({ unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  password: string;
+  // --- CORRECCIÓN DE SEGURIDAD ---
+  // Añadimos `{ select: false }` a la columna de la contraseña.
+  // Esto le dice a TypeORM que NUNCA incluya este campo en las consultas
+  // a menos que se pida explícitamente.
+  // Así, nunca se enviará al frontend.
+  @Column({ nullable: true, select: false })
+  password?: string;
 
-  @Column({ type: 'text', nullable: false })
+  @Column({ nullable: true })
   address: string;
 
-  @Column({ type: 'bigint', nullable: false })
+  @Column({ type: 'bigint', nullable: true })
   phone: number;
 
-  @Column({ type: 'date' })
+  @Column({
+    type: 'enum',
+    enum: Diet,
+    default: Diet.GENERAL,
+  })
+  diet: Diet;
+
+  @Column({ type: 'timestamp', nullable: true })
   birthday: Date;
 
-  @Column({ type: 'enum', enum: Roles, default: Roles.USER })
+  @Column({
+    type: 'enum',
+    enum: Roles,
+    default: Roles.CUSTOMER,
+  })
   roles: Roles;
 
   @Column({ default: false })
