@@ -31,13 +31,13 @@ export class CartController {
   }
 
   @Get(':userId')
-  getCart(@Param('userId', ParseUUIDPipe) userId: string): Promise<Cart> {
+  getCart(@Param('id') userId: string): Promise<Cart> {
     return this.cartService.getCart(userId);
   }
 
   @Post('addsingle/:userId')
   addSingleProductToCart(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('id') userId: string,
     @Body() addDto: AddSingleProductToCartDto,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.addSingleProductToCart(userId, addDto);
@@ -45,7 +45,7 @@ export class CartController {
 
   @Post('addmultiple/:userId')
   addMultipleProductsToCart(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('id') userId: string,
     @Body() addMultipleDto: AddMultipleProductsToCartDto,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
@@ -53,7 +53,7 @@ export class CartController {
 
   @Put(':userId')
   updateCartItems(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('id') userId: string,
     @Body() updateCartDto: UpdateCartDto,
   ): Promise<FullCartSummaryDto | null> {
     return this.cartService.updateCartItems(userId, updateCartDto);
@@ -61,31 +61,28 @@ export class CartController {
 
   @Delete(':userId/:itemId')
   removeCartItem(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('id') userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.removeCartItem(userId, itemId);
   }
 
   @Delete(':userId')
-  async clearCart(@Param('userId', ParseUUIDPipe) userId: string): Promise<{ message: string }> {
+  async clearCart(@Param('id') userId: string): Promise<{ message: string }> {
     await this.cartService.clearCart(userId);
     return { message: 'Cart has been successfully cleared.' };
   }
 
   @Get(':userId/:itemId')
   findCartItem(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('id') userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<CartItem> {
     return this.cartService.findCartItem(userId, itemId);
   }
 
   @Post('checkout/:userId')
-  checkout(
-    @Param('userId', ParseUUIDPipe) userId: string,
-    @Body() checkoutDto: CheckoutDto,
-  ): Promise<Orders> {
+  checkout(@Param('id') userId: string, @Body() checkoutDto: CheckoutDto): Promise<Orders> {
     return this.cartService.checkout(userId, checkoutDto);
   }
 }
