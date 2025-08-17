@@ -87,6 +87,7 @@ export class ProductsController {
   }
 
   @Put('inactivate/:id')
+  // @UseGuards(AuthGuard('jwt'))
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
   }
