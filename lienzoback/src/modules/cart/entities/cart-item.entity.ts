@@ -10,6 +10,9 @@ export class CartItem {
   @Column()
   quantity: number;
 
+  @Column({ type: 'decimal', precision: 10 })
+  price: number;
+
   @ManyToOne(() => Cart, (cart) => cart.items)
   @JoinColumn({ name: 'cart_id' })
   cart: Cart;

@@ -1,6 +1,6 @@
 import { IsUUID, IsNumber, IsPositive } from 'class-validator';
 
-export class AddToCartDto {
+export class AddSingleProductToCartDto {
   @IsUUID()
   productId: string;
 

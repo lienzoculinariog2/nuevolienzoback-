@@ -87,6 +87,5 @@ export class Users {
   category: Categories;
 
   @OneToOne(() => Cart, (cart) => cart.user)
-  @JoinColumn({ name: 'cart_id' })
   cart: Cart;
 }
