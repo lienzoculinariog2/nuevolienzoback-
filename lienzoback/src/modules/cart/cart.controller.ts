@@ -6,7 +6,6 @@ import { UpdateCartDto } from './dto/update-cart.dto';
 import { Cart } from './entities/cart.entity';
 import { Orders } from '../orders/entities/order.entity';
 import { CheckoutDto } from './dto/check-out.dto';
-import { TemporaryCartDto } from './dto/temporary-cart.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 import { CartItem } from './entities/cart-item.entity';
 
@@ -21,7 +20,7 @@ export class CartController {
 
   @Get('inactive')
   findInactiveCarts() {
-    return this.cartService.findAllInactive();
+    return this.cartService.findInactive();
   }
 
   @Delete('inactive')
@@ -31,13 +30,13 @@ export class CartController {
   }
 
   @Get(':userId')
-  getCart(@Param('id') userId: string): Promise<Cart> {
+  getCart(@Param('userId') userId: string): Promise<FullCartSummaryDto> {
     return this.cartService.getCart(userId);
   }
 
   @Post('addsingle/:userId')
   addSingleProductToCart(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Body() addDto: AddSingleProductToCartDto,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.addSingleProductToCart(userId, addDto);
@@ -45,7 +44,7 @@ export class CartController {
 
   @Post('addmultiple/:userId')
   addMultipleProductsToCart(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Body() addMultipleDto: AddMultipleProductsToCartDto,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
@@ -53,7 +52,7 @@ export class CartController {
 
   @Put(':userId')
   updateCartItems(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Body() updateCartDto: UpdateCartDto,
   ): Promise<FullCartSummaryDto | null> {
     return this.cartService.updateCartItems(userId, updateCartDto);
@@ -61,28 +60,28 @@ export class CartController {
 
   @Delete(':userId/:itemId')
   removeCartItem(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<FullCartSummaryDto> {
     return this.cartService.removeCartItem(userId, itemId);
   }
 
   @Delete(':userId')
-  async clearCart(@Param('id') userId: string): Promise<{ message: string }> {
+  async clearCart(@Param('userId') userId: string): Promise<{ message: string }> {
     await this.cartService.clearCart(userId);
     return { message: 'Cart has been successfully cleared.' };
   }
 
   @Get(':userId/:itemId')
   findCartItem(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<CartItem> {
     return this.cartService.findCartItem(userId, itemId);
   }
 
   @Post('checkout/:userId')
-  checkout(@Param('id') userId: string, @Body() checkoutDto: CheckoutDto): Promise<Orders> {
+  checkout(@Param('userId') userId: string, @Body() checkoutDto: CheckoutDto): Promise<Orders> {
     return this.cartService.checkout(userId, checkoutDto);
   }
 }

@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './entities/cart.entity';
@@ -17,7 +11,6 @@ import { UpdateCartDto } from './dto/update-cart.dto';
 import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { CheckoutDto } from './dto/check-out.dto';
-import { TemporaryCartDto } from './dto/temporary-cart.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 
 @Injectable()
@@ -37,7 +30,7 @@ export class CartService {
     private orderDetailRepository: Repository<OrderDetail>,
   ) {}
 
-  async findActive() {
+  async findAllActive() {
     const carts = await this.cartRepository.find({
       where: { isActive: true },
       relations: ['items', 'items.product', 'user'],
@@ -60,7 +53,7 @@ export class CartService {
   }
 
   async removeInactiveCarts(): Promise<void> {
-    const inactiveCarts = await this.findAllInactive();
+    const inactiveCarts = await this.findInactive();
 
     if (inactiveCarts.length === 0) {
       throw new NotFoundException('There is not inactive carts.');
@@ -69,7 +62,7 @@ export class CartService {
     await this.cartRepository.remove(inactiveCarts);
   }
 
-  async getCart(userId: string): Promise<Cart> {
+  async getCart(userId: string): Promise<FullCartSummaryDto> {
     const user = await this.usersRepository.findOneBy({ id: userId });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
@@ -80,32 +73,13 @@ export class CartService {
     });
 
     if (!cart) {
-      throw new NotFoundException(`Cart for user with id ${userId} not found`);
+      return {
+        items: [],
+        totalItems: 0,
+        subTotal: 0,
+      };
     }
-
-    return cart;
-  }
-
-  async findAllActive() {
-    const carts = await this.cartRepository.find({
-      where: { isActive: true },
-      relations: ['items', 'items.product', 'user'],
-    });
-    if (carts.length === 0) {
-      throw new NotFoundException('No active carts found.');
-    }
-    return carts;
-  }
-
-  async findAllInactive() {
-    const carts = await this.cartRepository.find({
-      where: { isActive: false },
-      relations: ['items', 'items.product', 'user'],
-    });
-    if (carts.length === 0) {
-      throw new NotFoundException('No inactive carts found.');
-    }
-    return carts;
+    return this.calculateCartSummary(cart);
   }
 
   async addSingleProductToCart(
@@ -120,7 +94,7 @@ export class CartService {
       where: { user: { id: userId } },
       relations: ['items', 'items.product'],
     });
-    // Si el carrito no existe, se crea con isActive en false
+
     if (!cart) {
       cart = this.cartRepository.create({
         user: user,
@@ -139,16 +113,14 @@ export class CartService {
 
     let cartItem = cart.items.find((item) => item.product.id === productId);
 
-    //Lógica para calcular la nueva cantidad total
     const newTotalQuantity = (cartItem ? cartItem.quantity : 0) + quantity;
 
-    // La validación ahora usa la cantidad total
     if (product.stock < newTotalQuantity) {
       throw new BadRequestException(
         `Not enough stock for product with id ${productId}. Available: ${product.stock}, Requested: ${newTotalQuantity}`,
       );
     }
-    // Si el carrito está inactivo con el primer artículo, se marca como activo.
+
     if (!cart.isActive && cart.items.length === 0) {
       cart.isActive = true;
       await this.cartRepository.save(cart);
@@ -269,13 +241,12 @@ export class CartService {
     const errors: string[] = [];
     const updatesToProcess: { cartItem: CartItem; product: Products; quantity: number }[] = [];
 
-    // Paso 1: Validar todos los ítems antes de procesar cualquier cambio
     for (const updateItem of updateCartDto.updates) {
       const { itemId, quantity } = updateItem;
       const cartItem = cart.items.find((item) => item.id === itemId);
 
       if (!cartItem) {
-        errors.push(`CartItem con ID ${itemId} no encontrado en el carrito.`);
+        errors.push(`CartItem con ID ${itemId} not found.`);
         continue;
       }
 
@@ -284,22 +255,20 @@ export class CartService {
       });
 
       if (!product) {
-        errors.push(`Producto con ID ${cartItem.product.id} no encontrado.`);
+        errors.push(`Product ID ${cartItem.product.id} not found.`);
         continue;
       }
 
       if (quantity > 0 && product.stock < quantity) {
         errors.push(
-          `No hay suficiente stock para el producto con ID ${product.id}. Disponibles: ${product.stock}, Solicitados: ${quantity}`,
+          `Not enough stock for product with id ${product.id}. Available: ${product.stock}, Request: ${quantity}`,
         );
         continue;
       }
 
-      // Si la validación pasa, lo añadimos a una lista para procesar después
       updatesToProcess.push({ cartItem, product, quantity });
     }
 
-    // Paso 2: Si hay algún error, lanzar una única excepción
     if (errors.length > 0) {
       throw new BadRequestException({
         message: 'Could not update cart due to the following errors:',
@@ -307,7 +276,6 @@ export class CartService {
       });
     }
 
-    // Paso 3: Si no hay errores, procesar las actualizaciones
     for (const update of updatesToProcess) {
       const { cartItem, quantity } = update;
 
@@ -470,6 +438,8 @@ export class CartService {
         quantity: item.quantity,
         imgUrl: imgUrl,
         totalItemPrice: totalItemPrice,
+        description: item.product.description,
+        stock: item.product.stock,
       };
     });
 
