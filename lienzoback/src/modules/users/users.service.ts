@@ -12,6 +12,10 @@ export class UsersService {
     private readonly userRepository: Repository<Users>,
   ) {}
 
+  async findAll(): Promise<Users[]> {
+    return this.userRepository.find();
+  }
+
   async create(createUserDto: CreateUserDto): Promise<Users> {
     const existingUser = await this.userRepository.findOne({
       where: { id: createUserDto.id },

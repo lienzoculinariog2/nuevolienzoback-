@@ -20,6 +20,12 @@ import type { RequestWithUser } from '../common/utils/request-with-user.interfac
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get()
+  // @UseGuards(AuthGuard('jwt'))
+  async findAll(): Promise<Users[]> {
+    return this.usersService.findAll();
+  }
+
   @Post()
   @UseGuards(AuthGuard('jwt'))
   async create(@Body() createUserDto: CreateUserDto): Promise<Users> {
