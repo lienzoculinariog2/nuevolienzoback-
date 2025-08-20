@@ -22,6 +22,8 @@ import { PaymentsModule } from './modules/payments/payments.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeOrmConfig],
+      envFilePath: process.env.NODE_ENV === 'production' ? undefined : '.env.development',
+      ignoreEnvFile: process.env.NODE_ENV === 'production', // Ignorar archivos .env en producción
     }),
 
     TypeOrmModule.forRootAsync({
