@@ -15,6 +15,7 @@ console.log('🔍 TypeORM Config Debug:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('isProduction:', isProduction);
 console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('TYPEORM_SYNC:', process.env.TYPEORM_SYNC);
 if (isProduction) {
   console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO');
 } else {
@@ -33,8 +34,9 @@ const config = {
   port: isProduction ? undefined : (process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432),
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
-  synchronize: true,
-  logging: false,
+  // Control de sincronización: en producción solo si TYPEORM_SYNC=true
+  synchronize: isProduction ? process.env.TYPEORM_SYNC === 'true' : true,
+  logging: !isProduction, // Solo logging en desarrollo
   dropSchema: false,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/migrations/*{.ts,.js}'],
