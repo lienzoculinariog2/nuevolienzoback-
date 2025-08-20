@@ -15,7 +15,7 @@ import {
 
 import { OneToMany } from 'typeorm';
 
-@Entity('PRODUCTOS')
+@Entity('products')
 export class Products {
   static image(image: any) {
     throw new Error('Method not implemented.');
