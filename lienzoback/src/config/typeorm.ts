@@ -38,7 +38,7 @@ const config = {
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
   // NUNCA sincronizar automáticamente en producción
-  synchronize: false,
+  synchronize: process.env.TYPEORM_SYNC_DISABLED === 'true' ? false : (isProduction ? false : true),
   logging: !isProduction, // Solo logging en desarrollo
   dropSchema: false,
   entities: ['dist/**/*.entity.js'],
