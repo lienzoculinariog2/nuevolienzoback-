@@ -16,6 +16,9 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('isProduction:', isProduction);
 console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('TYPEORM_SYNC:', process.env.TYPEORM_SYNC);
+console.log('TYPEORM_DROP:', process.env.TYPEORM_DROP);
+console.log('Final synchronize value:', false);
+console.log('Final dropSchema value:', false);
 if (isProduction) {
   console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO');
 } else {
@@ -34,8 +37,8 @@ const config = {
   port: isProduction ? undefined : (process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432),
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
-  // Control de sincronización: en producción solo si TYPEORM_SYNC=true
-  synchronize: isProduction ? process.env.TYPEORM_SYNC === 'true' : true,
+  // NUNCA sincronizar automáticamente en producción
+  synchronize: false,
   logging: !isProduction, // Solo logging en desarrollo
   dropSchema: false,
   entities: ['dist/**/*.entity.js'],
