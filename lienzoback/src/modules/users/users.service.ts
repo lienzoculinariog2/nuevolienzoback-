@@ -12,6 +12,10 @@ export class UsersService {
     private readonly userRepository: Repository<Users>,
   ) {}
 
+  async findAll(): Promise<Users[]> {
+    return this.userRepository.find();
+  }
+
   async create(createUserDto: CreateUserDto): Promise<Users> {
     const existingUser = await this.userRepository.findOne({
       where: { id: createUserDto.id },
@@ -44,6 +48,20 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<Users> {
+    const user = await this.userRepository.preload({
+      id: id,
+      ...updateUserDto,
+    });
+
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    await this.userRepository.save(user);
+    return user;
+  }
+
+  async update_admin(id: string, updateUserDto: UpdateUserDto): Promise<Users> {
     const user = await this.userRepository.preload({
       id: id,
       ...updateUserDto,

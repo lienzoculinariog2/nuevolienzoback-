@@ -24,6 +24,7 @@ export enum Diet {
 export enum Roles {
   CUSTOMER = 'user',
   ADMIN = 'admin',
+  BANNED = 'banned',
 }
 
 @Entity({ name: 'users' })
