@@ -5,9 +5,11 @@ import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-
 
 export enum OrderStatus {
   PENDING = 'pending',
+  PAID = 'paid',
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   CANCELED = 'canceled',
+  PAYMENT_FAILED = 'payment_failed',
 }
 
 @Entity({ name: 'ORDERS' })
@@ -29,6 +31,15 @@ export class Orders {
 
   @Column({ name: 'is_paid', default: false })
   isPaid: boolean;
+
+  @Column({ name: 'stripe_payment_intent_id', nullable: true })
+  stripePaymentIntentId: string;
+
+  @Column({ name: 'stripe_charge_id', nullable: true })
+  stripeChargeId: string;
+
+  @Column({ name: 'payment_status', nullable: true })
+  paymentStatus: string;
 
   @Column({ name: 'shipping_address', nullable: true })
   shippingAddress: string;

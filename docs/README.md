@@ -16,6 +16,7 @@ Backend API para el proyecto **Lienzo Culinario**, desarrollado como parte del p
 - **🥘 Ingredientes** - Gestión de ingredientes de productos
 - **📁 Subida de Archivos** - Integración con Cloudinary para imágenes
 - **🔐 Autenticación** - JWT y Auth0 integration
+- **💳 Pagos** - Integración con Stripe para procesamiento de pagos
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -25,6 +26,7 @@ Backend API para el proyecto **Lienzo Culinario**, desarrollado como parte del p
 - **ORM**: TypeORM
 - **Autenticación**: JWT + Auth0
 - **Almacenamiento**: Cloudinary
+- **Pagos**: Stripe
 - **Documentación**: Swagger/OpenAPI
 - **Validación**: class-validator
 - **Testing**: Jest
@@ -43,7 +45,8 @@ src/
 │   ├── reviews/        # Sistema de reseñas
 │   ├── discount-codes/ # Códigos de descuento
 │   ├── ingredients/    # Gestión de ingredientes
-│   └── file-upload/    # Subida de archivos
+│   ├── file-upload/    # Subida de archivos
+│   └── payments/       # Integración de pagos con Stripe
 ├── config/             # Configuraciones
 ├── common/             # Utilidades compartidas
 └── types/              # Definiciones de tipos
@@ -56,6 +59,7 @@ src/
 - **📋 Endpoints**: [API/endpoints.md](API/endpoints.md)
 - **🔐 Autenticación**: [API/authentication.md](API/authentication.md)
 - **📁 Subida de Archivos**: [API/file-upload.md](API/file-upload.md)
+- **💳 Pagos**: [API/stripe-integration.md](API/stripe-integration.md)
 
 ## 🚀 Inicio Rápido
 
@@ -100,6 +104,7 @@ npm run start:dev
 | **Cart** | `GET/POST/PUT/DELETE /cart` | Carrito de compras |
 | **Orders** | `GET/POST/PUT/DELETE /orders` | Gestión de órdenes |
 | **Reviews** | `GET/POST/PUT/DELETE /reviews` | Sistema de reseñas |
+| **Payments** | `POST/GET /payments` | Procesamiento de pagos con Stripe |
 
 ## 🔐 Autenticación
 
@@ -149,6 +154,11 @@ JWT_SECRET=tu_jwt_secret
 CLOUDINARY_CLOUD_NAME=tu_cloud_name
 CLOUDINARY_API_KEY=tu_api_key
 CLOUDINARY_API_SECRET=tu_api_secret
+
+# Stripe (requerido para pagos)
+STRIPE_SECRET_KEY=sk_test_tu_stripe_secret_key
+STRIPE_PUBLISHABLE_KEY=pk_test_tu_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_tu_stripe_webhook_secret
 
 # Auth0 (opcional)
 AUTH0_DOMAIN=tu_dominio.auth0.com
