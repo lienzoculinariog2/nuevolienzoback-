@@ -6,7 +6,6 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
-  PrimaryColumn,
 } from 'typeorm';
 import { Orders } from 'src/modules/orders/entities/order.entity';
 import { Reviews } from 'src/modules/product-review/entities/review.entity';
@@ -24,11 +23,12 @@ export enum Diet {
 export enum Roles {
   CUSTOMER = 'user',
   ADMIN = 'admin',
+  BANNED = "BANNED",
 }
 
 @Entity({ name: 'users' })
 export class Users {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ nullable: true })
