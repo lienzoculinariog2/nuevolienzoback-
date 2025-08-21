@@ -24,7 +24,7 @@ export class PaymentsService {
       const { amount, currency, orderId, customerEmail, description, items } = createPaymentIntentDto;
 
       const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount * 100), // Stripe works with cents
+        amount: Math.round(amount * 100), // Convert dollars to cents for Stripe
         currency,
         metadata: {
           orderId,
@@ -52,7 +52,7 @@ export class PaymentsService {
       return {
         clientSecret: paymentIntent.client_secret || '',
         paymentIntentId: paymentIntent.id,
-        amount: paymentIntent.amount / 100, // Convert back to dollars
+        amount: paymentIntent.amount / 100, // Convert cents back to dollars
         currency: paymentIntent.currency,
         status: paymentIntent.status,
       };
@@ -102,7 +102,7 @@ export class PaymentsService {
       };
 
       if (amount) {
-        refundParams.amount = Math.round(amount * 100);
+        refundParams.amount = Math.round(amount * 100); // Convert dollars to cents
       }
 
       return await this.stripe.refunds.create(refundParams);

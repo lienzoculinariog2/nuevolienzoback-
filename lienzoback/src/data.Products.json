@@ -2,7 +2,7 @@
   {
     "name": "Salmón al Horno con Espárragos",
     "description": "Filete de salmón fresco horneado a la perfección, acompañado de espárragos asados y un toque de limón.",
-    "price": 750,
+    "price": 7.50,
     "stock": 25,
     "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667861/f6b043a7-bbef-4213-84ba-7f8abac99dee/ri5vzizygecgyibi9hp3.jpg",
     "category": {
@@ -29,7 +29,7 @@
   {
     "name": "Ensalada Keto de Pollo y Aguacate",
     "description": "Una ensalada rica y refrescante con pechuga de pollo a la parrilla, aguacate, tomate cherry, pepino y aderezo ranch keto.",
-    "price": 600,
+    "price": 6.00,
     "stock": 30,
     "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1755017603/categories/d7f9e45b-eb56-439a-952c-4469f30ecd53/cqnb8wspknktyb2pwtov.jpg",
     "category": {
@@ -56,7 +56,7 @@
   {
     "name": "Bowl de Quinoa y Vegetales",
     "description": "Bowl nutritivo con quinoa cocida, brócoli, zanahoria, pimientos asados y garbanzos, bañado en una vinagreta ligera.",
-    "price": 490,
+    "price": 4.90,
     "stock": 40,
     "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754667973/f6b043a7-bbef-4213-84ba-7f8abac99dee/igpjbsgnbadoxfafsxqt.jpg",
     "category": {
@@ -83,7 +83,7 @@
   {
     "name": "Filete de Res con Puré",
     "description": "Jugoso filete de res a la parrilla con puré cremoso de coliflor, una alternativa baja en carbohidratos.",
-    "price": 890,
+    "price": 8.90,
     "stock": 20,
     "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754668005/f6b043a7-bbef-4213-84ba-7f8abac99dee/vqes7wgct3n3coshbcnf",
     "category": {
@@ -107,7 +107,7 @@
   {
     "name": "Pollo Thai con curry",
     "description": "Curry de pollo cremoso y especiado, preparado con leche de coco y una mezcla de vegetales. Ideal para la dieta keto.",
-    "price": 680,
+    "price": 6.80,
     "stock": 15,
     "imgUrl": "https://res.cloudinary.com/dqprpzpin/image/upload/v1754668219/f6b043a7-bbef-4213-84ba-7f8abac99dee/atdigt1vkkf6xldbx8lm.jpg",
     "category": {

@@ -120,7 +120,7 @@ export class PaymentOrderService {
         hasPaymentIntent: true,
         paymentIntentId: order.stripePaymentIntentId,
         paymentStatus: paymentIntent.status,
-        amount: paymentIntent.amount / 100,
+        amount: paymentIntent.amount / 100, // Convert cents to dollars
         currency: paymentIntent.currency,
         isPaid: order.isPaid,
         orderStatus: order.statusOrder,
