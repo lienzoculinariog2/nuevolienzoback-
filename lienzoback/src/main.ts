@@ -3,16 +3,21 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
+import { corsConfig } from './config/cors.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://tu-frontend-domain.com', 'http://localhost:3000'] // Permitir frontend local en producción
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true,
-  });
+  // Configuración de CORS basada en el entorno
+  const isProduction = process.env.NODE_ENV === 'production';
+  const config = isProduction ? corsConfig.production : corsConfig.development;
+  
+  app.enableCors(config);
+  
+  // Log de configuración de CORS para debugging
+  console.log('🔧 CORS Configuration:');
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  console.log('Frontend URL:', process.env.FRONTEND_URL || 'Not configured');
+  console.log('CORS Origins:', config.origin);
   const swaggerDoc = new DocumentBuilder()
     .setTitle('Lienzo Culinario')
     .setVersion('1.0')
