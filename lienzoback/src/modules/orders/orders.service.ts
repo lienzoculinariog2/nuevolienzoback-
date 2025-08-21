@@ -152,16 +152,20 @@ export class OrdersService {
     });
   }
 
-  async getAllOrders(status: OrderStatus | undefined): Promise<Orders[]> {
-    return this.ordersRepository.find({
+  async getAllOrders(status?: OrderStatus): Promise<Orders[]> {
+    const findOptions: any = {
       relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
       order: {
         date: 'DESC',
       },
-    });
+    };
+    if (status) {
+      findOptions.where = { statusOrder: status };
+    }
+    return this.ordersRepository.find(findOptions);
   }
 
-  async getOrderById(userId: string): Promise<Orders[]> {
+  async getUserOrders(userId: string): Promise<Orders[]> {
     return this.ordersRepository.find({
       where: { user: { id: userId } },
       relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
@@ -170,6 +174,18 @@ export class OrdersService {
       },
     });
   }
+
+  async findOrderById(orderId: string): Promise<Orders> {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
+    });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+    return order;
+  }
+
   async updateOrder(orderId: string, updateOrderDto: UpdateOrderDto): Promise<Orders> {
     const order = await this.ordersRepository.findOneBy({ id: orderId });
     if (!order) {
@@ -180,63 +196,61 @@ export class OrdersService {
   }
 
   async cancelOrder(orderId: string): Promise<Orders> {
-    const order = await this.ordersRepository.findOne({
-      where: { id: orderId },
-      relations: ['orderDetails', 'orderDetails.product'],
-    });
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const order = await manager.findOne(Orders, {
+        where: { id: orderId },
+        relations: ['orderDetails', 'orderDetails.product'],
+      });
 
-    if (!order) {
-      throw new NotFoundException(`Order with ID ${orderId} not found`);
-    }
-    if (order.statusOrder === OrderStatus.CANCELED) {
-      throw new BadRequestException('Order is already canceled.');
-    }
-    // Regresar stock de productos
-    for (const detail of order.orderDetails) {
-      const product = await this.productsRepository.findOneBy({ id: detail.product.id });
-      if (product) {
-        product.stock += detail.quantity;
-        await this.productsRepository.save(product);
+      if (!order) {
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
       }
-    }
-    order.statusOrder = OrderStatus.CANCELED;
-    return this.ordersRepository.save(order);
+      if (
+        order.statusOrder === OrderStatus.SHIPPED ||
+        order.statusOrder === OrderStatus.DELIVERED ||
+        order.statusOrder === OrderStatus.CANCELED
+      ) {
+        throw new BadRequestException(
+          'Cannot cancel an order that is already shipped, delivered, or canceled.',
+        );
+      }
+
+      for (const detail of order.orderDetails) {
+        const product = await manager.findOneBy(Products, { id: detail.product.id });
+        if (product) {
+          product.stock += detail.quantity;
+          await manager.save(Products, product);
+        }
+      }
+      order.statusOrder = OrderStatus.CANCELED;
+      const canceledOrder = await manager.save(Orders, order);
+      return canceledOrder;
+    });
   }
 
   async updateOrderStatus(orderId: string, newStatus: OrderStatus): Promise<Orders> {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId },
-      relations: ['user'], // Necesitamos el usuario para la notificación por email
+      relations: ['user'],
     });
     if (!order) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    if (newStatus === OrderStatus.SHIPPED && order.statusOrder !== OrderStatus.PENDING) {
-      throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
-    }
-    if (newStatus === OrderStatus.DELIVERED && order.statusOrder !== OrderStatus.SHIPPED) {
-      throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
-    }
-    if (
-      newStatus === OrderStatus.CANCELED &&
-      (order.statusOrder === OrderStatus.SHIPPED || order.statusOrder === OrderStatus.DELIVERED)
-    ) {
-      throw new BadRequestException('Cannot cancel a shipped or delivered order.');
+    if (newStatus === OrderStatus.SHIPPED) {
+      if (order.statusOrder !== OrderStatus.PENDING) {
+        throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
+      }
+    } else if (newStatus === OrderStatus.DELIVERED) {
+      if (order.statusOrder !== OrderStatus.SHIPPED) {
+        throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
+      }
+    } else if (newStatus === OrderStatus.CANCELED) {
+      throw new BadRequestException('Use cancel button, which handles stock replenishment.');
     }
 
     order.statusOrder = newStatus;
     const updatedOrder = await this.ordersRepository.save(order);
-
-    // Simulación de envío de notificación por email
-    if (newStatus === OrderStatus.SHIPPED) {
-      console.log(
-        `Sending email notification to ${order.user.email}: Your order ${order.id} has been shipped!`,
-      );
-      // Aquí integrar Nodemailer
-    } else if (newStatus === OrderStatus.DELIVERED) {
-      console.log(`Order ${order.id} marked as DELIVERED by user.`);
-    }
 
     return updatedOrder;
   }

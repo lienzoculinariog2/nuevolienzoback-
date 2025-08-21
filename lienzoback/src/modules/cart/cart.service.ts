@@ -359,67 +359,6 @@ export class CartService {
     return cartItem;
   }
 
-  async checkout(userId: string, checkoutDto: CheckoutDto): Promise<Orders> {
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['items', 'items.product'],
-    });
-
-    if (!cart || cart.items.length === 0) {
-      throw new BadRequestException('Cart is empty');
-    }
-    let subTotal = 0;
-    for (const item of cart.items) {
-      const product = await this.productsRepository.findOne({
-        where: { id: item.product.id },
-      });
-      if (!product) {
-        throw new NotFoundException(`Product with id ${item.product.id} not found`);
-      }
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(`Not enough stock for product with id ${product.id}`);
-      }
-      subTotal += item.quantity * product.price;
-    }
-
-    const paymentSuccessful = true;
-    if (!paymentSuccessful) {
-      throw new BadRequestException('Payment failed. Please try again.');
-    }
-
-    const newOrder = this.orderRepository.create({
-      user: cart.user,
-      total: subTotal,
-      date: new Date(),
-      statusOrder: OrderStatus.PENDING,
-      shippingAddress: checkoutDto.shippingAddress,
-      isPaid: true,
-    });
-    await this.orderRepository.save(newOrder);
-
-    for (const item of cart.items) {
-      const product = item.product;
-
-      const orderDetail = this.orderDetailRepository.create({
-        order: newOrder,
-        product,
-        quantity: item.quantity,
-        unitPrice: product.price,
-      });
-      await this.orderDetailRepository.save(orderDetail);
-
-      product.stock -= item.quantity;
-      await this.productsRepository.save(product);
-    }
-
-    await this.clearCart(userId);
-
-    return (await this.orderRepository.findOne({
-      where: { id: newOrder.id },
-      relations: ['orderDetails', 'orderDetails.product'],
-    }))!;
-  }
-
   private calculateCartSummary(cart: Cart): FullCartSummaryDto {
     let subTotal = 0;
     let totalItems = 0;

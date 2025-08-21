@@ -78,9 +78,4 @@ export class CartController {
   ): Promise<CartItem> {
     return this.cartService.findCartItem(userId, itemId);
   }
-
-  @Post('checkout/:userId')
-  checkout(@Param('userId') userId: string, @Body() checkoutDto: CheckoutDto): Promise<Orders> {
-    return this.cartService.checkout(userId, checkoutDto);
-  }
 }

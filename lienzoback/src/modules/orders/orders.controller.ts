@@ -10,7 +10,7 @@ export class OrdersController {
 
   @Post(':userId')
   async createOrder(
-    @Param('userId') userId: string, //
+    @Param('userId') userId: string,
     @Body() createOrderDto: CreateOrderDto,
   ): Promise<Orders> {
     return this.ordersService.createOrder(userId, createOrderDto);
@@ -21,9 +21,14 @@ export class OrdersController {
     return this.ordersService.getAllOrders(status);
   }
 
+  @Get('user/:userId')
+  getUserOrders(@Param('userId') userId: string): Promise<Orders[]> {
+    return this.ordersService.getUserOrders(userId);
+  }
+
   @Get(':orderId')
-  getOrderById(@Param('id', ParseUUIDPipe) id: string): Promise<Orders[]> {
-    return this.ordersService.getOrderById(id);
+  async findOrderById(@Param('orderId') orderId: string): Promise<Orders> {
+    return this.ordersService.findOrderById(orderId);
   }
 
   @Put(':orderId')
@@ -34,18 +39,16 @@ export class OrdersController {
     return this.ordersService.updateOrder(orderId, updateOrderDto);
   }
 
-  // @Put('cancel/:orderId')
-  // async cancelOrder(@Param('orderId') orderId: string): Promise<Orders> {
-  //   return this.ordersService.cancelOrder(orderId);
-  // }
+  @Put(':orderId/cancel')
+  cancelOrder(@Param('orderId') orderId: string): Promise<Orders> {
+    return this.ordersService.cancelOrder(orderId);
+  }
 
-  // @Put('shipped/:orderId')
-  // async shippedOrder(@Param('orderId') orderId: string): Promise<Orders> {
-  //   return this.ordersService.shippedOrder(orderId, OrderStatus.SHIPPED);
-  // }
-
-  // @Put('delivered/:orderId')
-  // async deliveredOrder(@Param('orderId') orderId: string): Promise<Orders> {
-  //   return this.ordersService.deliveredOrder(orderId, OrderStatus.DELIVERED);
-  // }
+  @Put(':orderId/status')
+  async updateOrderStatus(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body('newStatus') newStatus: OrderStatus,
+  ): Promise<Orders> {
+    return this.ordersService.updateOrderStatus(orderId, newStatus);
+  }
 }
