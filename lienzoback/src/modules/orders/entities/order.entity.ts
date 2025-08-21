@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMan
 import { Users } from 'src/modules/users/entities/user.entity';
 import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
 import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
+import { Payment } from 'src/modules/payments/entities/payment.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -53,4 +54,7 @@ export class Orders {
 
   @OneToMany(() => DiscountCodesUsed, (discountCodesUsed) => discountCodesUsed.order)
   discountCodesUsed: DiscountCodesUsed[];
+
+  @OneToMany(() => Payment, (payment) => payment.order)
+  payments: Payment[];
 }

@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import { PaymentCalculationService } from './services/payment-calculation.service';
 
 @Injectable()
 export class PaymentsService {
