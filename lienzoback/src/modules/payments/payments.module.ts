@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
 import { PaymentCalculationService } from './services/payment-calculation.service';
 import { PaymentManagementService } from './services/payment-management.service';
+import { WebhookMonitoringService } from './services/webhook-monitoring.service';
 import { Orders } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { Products } from '../products/entities/product.entity';
@@ -17,7 +18,7 @@ import { ConfigModule } from '@nestjs/config';
     TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService],
-  exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService],
+  providers: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
+  exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
 })
 export class PaymentsModule {}

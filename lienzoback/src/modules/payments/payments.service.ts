@@ -31,7 +31,7 @@ export class PaymentsService {
 
       // 🛡️ SECURITY: Check idempotency to prevent duplicate payments
       if (idempotencyKey) {
-        const existingPayment = await this.paymentManagementService.checkIdempotency(idempotencyKey, orderId);
+        const existingPayment = await this.checkIdempotency(idempotencyKey, orderId);
         if (existingPayment) {
           this.logger.warn(`Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`);
           throw new ConflictException('Payment already processed with this idempotency key');
@@ -147,6 +147,19 @@ export class PaymentsService {
     } catch (error) {
       this.logger.error(`Webhook signature verification failed: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Check if a payment with the same idempotency key already exists
+   */
+  private async checkIdempotency(idempotencyKey: string, orderId: string): Promise<boolean> {
+    try {
+      const existingPayment = await this.paymentManagementService.checkIdempotency(idempotencyKey, orderId);
+      return !!existingPayment;
+    } catch (error) {
+      this.logger.error(`Error checking idempotency: ${error.message}`);
+      return false;
     }
   }
 }

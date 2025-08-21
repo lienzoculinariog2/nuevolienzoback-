@@ -17,7 +17,6 @@ export class PaymentManagementService {
     @InjectRepository(Orders)
     private readonly ordersRepository: Repository<Orders>,
     private readonly paymentCalculationService: PaymentCalculationService,
-    private readonly paymentsService: PaymentsService,
   ) {}
 
   /**
