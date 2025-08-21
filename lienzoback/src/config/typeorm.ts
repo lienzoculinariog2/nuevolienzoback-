@@ -37,14 +37,19 @@ const config = {
   port: isProduction ? undefined : (process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432),
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
-  // NUNCA sincronizar automáticamente en producción
-  synchronize: process.env.TYPEORM_SYNC_DISABLED === 'true' ? false : (isProduction ? false : true),
+  // Sincronización controlada por variables de entorno
+  synchronize: process.env.TYPEORM_SYNC === 'true',
   logging: !isProduction, // Solo logging en desarrollo
-  dropSchema: false,
+  dropSchema: process.env.TYPEORM_DROP === 'true',
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/migrations/*{.ts,.js}'],
   // Configuración SSL para Render
   ssl: isProduction ? { rejectUnauthorized: false } : false,
+  // Configuración para manejar dependencias
+  extra: {
+    // Forzar CASCADE en operaciones de drop
+    statement_timeout: 60000,
+  },
 };
 
 export default registerAs('typeorm', () => config);
