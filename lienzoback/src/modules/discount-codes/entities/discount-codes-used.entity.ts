@@ -3,7 +3,7 @@ import { Users } from 'src/modules/users/entities/user.entity';
 import { DiscountCodes } from 'src/modules/discount-codes/entities/discount-codes.entity';
 import { Orders } from 'src/modules/orders/entities/order.entity';
 
-@Entity({ name: 'DISCOUNT_CODES_USED' })
+@Entity({ name: 'discount_codes_used' })
 export class DiscountCodesUsed {
   @PrimaryGeneratedColumn('uuid')
   id: string;

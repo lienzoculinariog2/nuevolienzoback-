@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
 
-@Entity({ name: 'DISCOUNT_CODES' })
+@Entity({ name: 'discount_codes' })
 export class DiscountCodes {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -12,6 +12,7 @@ import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { Cart } from '../cart/entities/cart.entity';
+import { CartItem } from '../cart/entities/cart-item.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { Cart } from '../cart/entities/cart.entity';
       DiscountCodesUsed,
       DiscountCodes,
       Cart,
+      CartItem,
     ]),
     DiscountCodesModule,
     CartModule,

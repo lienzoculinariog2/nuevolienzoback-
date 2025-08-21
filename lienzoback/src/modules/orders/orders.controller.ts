@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  UseGuards,
-  Req,
-  Param,
-  Body,
-  ParseUUIDPipe,
-  Put,
-  Query,
-} from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, ParseUUIDPipe, Put, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { Orders, OrderStatus } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';

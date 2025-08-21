@@ -3,15 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Cart } from '../cart/entities/cart.entity';
 import { Products } from '../products/entities/product.entity';
 import { Users } from '../users/entities/user.entity';
-import { Orders } from '../orders/entities/order.entity';
 import { Repository } from 'typeorm';
 import { CheckoutDto } from './dto/check-out.dto';
 import { CartService } from '../cart/cart.service';
 import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
 import { DiscountCodesService } from '../discount-codes/discount-codes.service';
-import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { OrdersService } from '../orders/orders.service';
-import { CreateOrderDto, OrderItemDto } from '../orders/dto/create-order.dto';
+import { OrderItemDto } from '../orders/dto/create-order.dto';
 
 @Injectable()
 export class CheckoutService {
@@ -24,9 +22,7 @@ export class CheckoutService {
     private usersRepository: Repository<Users>,
     @InjectRepository(DiscountCodesUsed)
     private discountCodesUsedRepository: Repository<DiscountCodesUsed>,
-    private readonly cartService: CartService,
     private readonly discountCodesService: DiscountCodesService,
-    private readonly ordersService: OrdersService,
   ) {}
 
   async checkout(userId: string, checkoutDto: CheckoutDto) {
