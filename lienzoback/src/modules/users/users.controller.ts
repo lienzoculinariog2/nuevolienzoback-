@@ -53,17 +53,17 @@ export class UsersController {
     }
     return this.usersService.update(id, updateUserDto);
   }
-  @Put(':id/admin')
+
+  // PATCH /users/:id/role
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @HasRoles(Roles.ADMIN)
-  async promoteToAdmin(@Param('id') id: string): Promise<Users> {
-    const userToUpdate = await this.usersService.findOneById(id);
-
-    // ✅ Correct: Create a DTO with only the fields you're updating
-    const updateUserDto: Partial<UpdateUserDto> = {
-      roles: Roles.ADMIN,
-    };
-
-    return this.usersService.update(id, updateUserDto);
+  @Patch(':id/role')
+  async updateRole(
+    @Param('id') id: string,
+    @Body('newRole') newRole: Roles, // 👈 viene en el body
+    @Req() req,
+  ) {
+    const currentUser = req.user; // 👈 usuario logueado extraído del token JWT
+    return this.usersService.updateRole(id, newRole, currentUser);
   }
 }
