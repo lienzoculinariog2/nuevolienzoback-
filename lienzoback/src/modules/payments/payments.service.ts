@@ -1,16 +1,21 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import { PaymentCalculationService } from './services/payment-calculation.service';
+import { PaymentManagementService } from './services/payment-management.service';
 
 @Injectable()
 export class PaymentsService {
   private readonly stripe: Stripe;
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly paymentCalculationService: PaymentCalculationService,
+    private readonly paymentManagementService: PaymentManagementService,
+  ) {
     const stripeKey = this.configService.get('STRIPE_SECRET_KEY');
     if (!stripeKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured');
@@ -22,33 +27,49 @@ export class PaymentsService {
 
   async createPaymentIntent(createPaymentIntentDto: CreatePaymentIntentDto): Promise<PaymentResponseDto> {
     try {
-      const { amount, currency, orderId, customerEmail, description, items } = createPaymentIntentDto;
+      const { orderId, customerEmail, description, idempotencyKey } = createPaymentIntentDto;
+
+      // 🛡️ SECURITY: Check idempotency to prevent duplicate payments
+      if (idempotencyKey) {
+        const existingPayment = await this.paymentManagementService.checkIdempotency(idempotencyKey, orderId);
+        if (existingPayment) {
+          this.logger.warn(`Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`);
+          throw new ConflictException('Payment already processed with this idempotency key');
+        }
+      }
+
+      // 🛡️ SECURITY: Calculate amount server-side, don't trust client
+      const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
+      
+      // Validate that order is not already paid
+      if (orderSummary.amount <= 0) {
+        throw new BadRequestException('Order amount must be greater than 0');
+      }
 
       const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount * 100), // Convert dollars to cents for Stripe
-        currency,
+        amount: Math.round(orderSummary.amount * 100), // Convert dollars to cents for Stripe
+        currency: orderSummary.currency,
         metadata: {
           orderId,
+          items: JSON.stringify(orderSummary.items),
+          ...(idempotencyKey && { idempotencyKey }),
         },
-        description: description || `Payment for order ${orderId}`,
+        description: description || orderSummary.description,
       };
 
       // Add customer email if provided
       if (customerEmail) {
         paymentIntentParams.receipt_email = customerEmail;
-      }
-
-      // Note: line_items is not supported in PaymentIntent, use metadata for items info
-      if (items && items.length > 0) {
-        paymentIntentParams.metadata = {
-          ...paymentIntentParams.metadata,
-          items: JSON.stringify(items),
-        };
+      } else if (orderSummary.customerEmail) {
+        paymentIntentParams.receipt_email = orderSummary.customerEmail;
       }
 
       const paymentIntent = await this.stripe.paymentIntents.create(paymentIntentParams);
 
-      this.logger.log(`Payment intent created: ${paymentIntent.id} for order: ${orderId}`);
+      // 🛡️ SECURITY: Create payment record in our database
+      await this.paymentManagementService.createPaymentRecord(orderId, paymentIntent);
+
+      this.logger.log(`Payment intent created: ${paymentIntent.id} for order: ${orderId} with amount: $${orderSummary.amount}`);
 
       return {
         clientSecret: paymentIntent.client_secret || '',
@@ -56,6 +77,8 @@ export class PaymentsService {
         amount: paymentIntent.amount / 100, // Convert cents back to dollars
         currency: paymentIntent.currency,
         status: paymentIntent.status,
+        orderId,
+        description: paymentIntent.description || orderSummary.description,
       };
     } catch (error) {
       this.logger.error(`Error creating payment intent: ${error.message}`);

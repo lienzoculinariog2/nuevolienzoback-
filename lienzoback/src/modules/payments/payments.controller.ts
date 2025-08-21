@@ -13,8 +13,10 @@ import {
 import type { RawBodyRequest } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Request } from 'express';
+import Stripe from 'stripe';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
+import { PaymentManagementService } from './services/payment-management.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import { CreateRefundDto } from './dto/create-refund.dto';
@@ -27,6 +29,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly paymentOrderService: PaymentOrderService,
+    private readonly paymentManagementService: PaymentManagementService,
   ) {}
 
   @Post('create-payment-intent')
@@ -103,29 +106,36 @@ export class PaymentsController {
     }
   }
 
-  @Post('confirm/:paymentIntentId')
-  @ApiOperation({ summary: 'Confirm a payment intent' })
-  @ApiResponse({ status: 200, description: 'Payment confirmed successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async confirmPayment(@Param('paymentIntentId') paymentIntentId: string) {
+  @Get('order/:orderId/payment-history')
+  @ApiOperation({ summary: 'Get complete payment history for a specific order' })
+  @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async getOrderPaymentHistory(@Param('orderId') orderId: string) {
     try {
-      const paymentIntent = await this.paymentsService.confirmPayment(paymentIntentId);
+      const paymentHistory = await this.paymentManagementService.getOrderPaymentHistory(orderId);
       return {
-        status: 'success',
-        paymentIntent,
+        orderId,
+        paymentHistory,
+        totalPayments: paymentHistory.length,
+        totalAmount: paymentHistory.reduce((sum, payment) => sum + payment.amount, 0),
+        totalRefunded: paymentHistory.reduce((sum, payment) => sum + payment.refundedAmount, 0),
       };
     } catch (error) {
-      this.logger.error(`Error confirming payment: ${error.message}`);
+      this.logger.error(`Error getting payment history for order ${orderId}: ${error.message}`);
       throw new HttpException(
         {
-          status: HttpStatus.BAD_REQUEST,
-          error: 'Error confirming payment',
+          status: HttpStatus.NOT_FOUND,
+          error: 'Error getting payment history',
           message: error.message,
         },
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.NOT_FOUND,
       );
     }
   }
+
+  // 🛡️ SECURITY: Removed manual confirmation endpoint
+  // Payment confirmation should only happen through Stripe webhooks
+  // This prevents inconsistent states between frontend and webhook processing
 
   @Get(':paymentIntentId')
   @ApiOperation({ summary: 'Get payment intent details' })
@@ -180,15 +190,36 @@ export class PaymentsController {
   @ApiBody({ type: CreateRefundDto })
   @ApiResponse({ status: 200, description: 'Refund created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Payment not found' })
   async createRefund(
     @Param('paymentIntentId') paymentIntentId: string,
     @Body() createRefundDto: CreateRefundDto,
   ) {
     try {
-      const refund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
+      // 🛡️ SECURITY: Get payment from our database first
+      const payment = await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
+      
+      // Create refund in Stripe
+      const stripeRefund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
+      
+      // 🛡️ SECURITY: Create refund record in our database
+      const refundRecord = await this.paymentManagementService.createRefundRecord(
+        payment.id,
+        stripeRefund,
+        'requested_by_customer', // Default reason
+      );
+
       return {
         status: 'success',
-        refund,
+        refund: {
+          id: refundRecord.id,
+          amount: refundRecord.amount,
+          currency: refundRecord.currency,
+          status: refundRecord.status,
+          stripeRefundId: refundRecord.stripeRefundId,
+          reason: 'requested_by_customer',
+          createdAt: refundRecord.createdAt,
+        },
       };
     } catch (error) {
       this.logger.error(`Error creating refund: ${error.message}`);
@@ -217,20 +248,8 @@ export class PaymentsController {
 
       const event = await this.paymentsService.handleWebhook(request.rawBody, signature);
 
-      // Handle different webhook events
-      switch (event.type) {
-        case 'payment_intent.succeeded':
-          await this.handlePaymentSucceeded(event.data.object);
-          break;
-        case 'payment_intent.payment_failed':
-          await this.handlePaymentFailed(event.data.object);
-          break;
-        case 'charge.refunded':
-          await this.handleRefundProcessed(event.data.object);
-          break;
-        default:
-          this.logger.log(`Unhandled event type: ${event.type}`);
-      }
+      // 🛡️ Use the new payment management service for all webhook events
+      await this.handleWebhookEvent(event);
 
       return { received: true };
     } catch (error) {
@@ -246,18 +265,44 @@ export class PaymentsController {
     }
   }
 
-  private async handlePaymentSucceeded(paymentIntent: any) {
-    this.logger.log(`Payment succeeded: ${paymentIntent.id}`);
-    await this.paymentOrderService.handlePaymentSuccess(paymentIntent.id);
+  private async handleWebhookEvent(event: Stripe.Event) {
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+      case 'payment_intent.payment_failed':
+      case 'payment_intent.canceled':
+      case 'payment_intent.processing':
+      case 'payment_intent.requires_action':
+        await this.handlePaymentIntentEvent(event);
+        break;
+      case 'charge.refunded':
+        await this.handleRefundEvent(event);
+        break;
+      default:
+        this.logger.log(`Unhandled event type: ${event.type}`);
+    }
   }
 
-  private async handlePaymentFailed(paymentIntent: any) {
-    this.logger.log(`Payment failed: ${paymentIntent.id}`);
-    await this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
+  private async handlePaymentIntentEvent(event: Stripe.Event) {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    this.logger.log(`Processing payment intent event: ${event.type} for ${paymentIntent.id}`);
+    
+    try {
+      await this.paymentManagementService.updatePaymentStatus(paymentIntent.id, event);
+    } catch (error) {
+      this.logger.error(`Error processing payment intent event: ${error.message}`);
+    }
   }
 
-  private async handleRefundProcessed(charge: any) {
-    this.logger.log(`Refund processed: ${charge.id}`);
-    // Here you would handle refund processing
+  private async handleRefundEvent(event: Stripe.Event) {
+    const charge = event.data.object as Stripe.Charge;
+    this.logger.log(`Processing refund event for charge: ${charge.id}`);
+    
+    try {
+      // Find the payment by charge ID and create refund record
+      // This would need to be implemented based on your charge tracking
+      this.logger.log(`Refund processed for charge: ${charge.id}`);
+    } catch (error) {
+      this.logger.error(`Error processing refund event: ${error.message}`);
+    }
   }
 }

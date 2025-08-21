@@ -3,16 +3,21 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
+import { PaymentCalculationService } from './services/payment-calculation.service';
+import { PaymentManagementService } from './services/payment-management.service';
 import { Orders } from '../orders/entities/order.entity';
+import { OrderDetail } from '../orders/entities/order-detail.entity';
+import { Products } from '../products/entities/product.entity';
+import { Payment } from './entities/payment.entity';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Orders]),
+    TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentOrderService],
-  exports: [PaymentsService, PaymentOrderService],
+  providers: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService],
+  exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService],
 })
 export class PaymentsModule {}

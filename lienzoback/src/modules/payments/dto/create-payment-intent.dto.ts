@@ -1,38 +1,41 @@
-import { IsNumber, IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-
-export class OrderItemDto {
-  @IsString()
-  productId: string;
-
-  @IsNumber()
-  quantity: number;
-
-  @IsNumber()
-  price: number;
-}
+import { IsString, IsOptional, IsEmail, Length } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePaymentIntentDto {
-  @IsNumber()
-  amount: number;
-
+  @ApiProperty({ 
+    description: 'Order ID (amount will be calculated server-side for security)',
+    example: '123e4567-e89b-12d3-a456-426614174000'
+  })
   @IsString()
-  currency: string = 'usd';
-
-  @IsString()
+  @Length(1, 255, { message: 'Order ID must be between 1 and 255 characters' })
   orderId: string;
 
+  @ApiProperty({ 
+    description: 'Customer email for receipt (optional)',
+    example: 'customer@example.com',
+    required: false
+  })
   @IsOptional()
-  @IsString()
+  @IsEmail({}, { message: 'Invalid email format' })
   customerEmail?: string;
 
+  @ApiProperty({ 
+    description: 'Payment description (optional)',
+    example: 'Payment for order #12345',
+    required: false
+  })
   @IsOptional()
   @IsString()
+  @Length(1, 500, { message: 'Description must be between 1 and 500 characters' })
   description?: string;
 
+  @ApiProperty({ 
+    description: 'Idempotency key to prevent duplicate payments (optional)',
+    example: 'unique-key-12345',
+    required: false
+  })
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => OrderItemDto)
-  items?: OrderItemDto[];
+  @IsString()
+  @Length(1, 255, { message: 'Idempotency key must be between 1 and 255 characters' })
+  idempotencyKey?: string;
 }
