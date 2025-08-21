@@ -196,7 +196,7 @@ export class PaymentManagementService {
       case 'processing':
         return PaymentStatus.PROCESSING;
       case 'requires_capture':
-        return PaymentStatus.REQUIRES_CAPTURE;
+        return PaymentStatus.REQUIRES_CONFIRMATION; // Use closest available status
       case 'canceled':
         return PaymentStatus.CANCELED;
       case 'succeeded':

@@ -49,32 +49,39 @@ export class PaymentCalculationService {
 
     // Calculate subtotal from order details
     let subtotal = 0;
-    const items = [];
+    const items: Array<{
+      productId: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }> = [];
 
     for (const detail of order.orderDetails) {
+      // Get product information
       const product = await this.productsRepository.findOne({
-        where: { id: detail.productId },
+        where: { id: detail.product.id },
       });
 
       if (!product) {
-        throw new NotFoundException(`Product with ID ${detail.productId} not found`);
+        throw new NotFoundException(`Product with ID ${detail.product.id} not found`);
       }
 
-      // Validate that the price in order detail matches current product price
-      if (detail.price !== product.price) {
+      // Validate that the unit price in order detail matches current product price
+      if (detail.unitPrice !== product.price) {
         throw new BadRequestException(
-          `Price mismatch for product ${product.id}. Expected: ${product.price}, Got: ${detail.price}`
+          `Price mismatch for product ${product.id}. Expected: ${product.price}, Got: ${detail.unitPrice}`
         );
       }
 
-      const itemTotal = detail.price * detail.quantity;
+      const itemTotal = detail.unitPrice * detail.quantity;
       subtotal += itemTotal;
 
       items.push({
-        productId: detail.productId,
+        productId: detail.product.id,
         productName: product.name,
         quantity: detail.quantity,
-        unitPrice: detail.price,
+        unitPrice: detail.unitPrice,
         totalPrice: itemTotal,
       });
     }
