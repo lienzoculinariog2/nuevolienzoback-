@@ -13,8 +13,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Users } from './entities/user.entity';
+import { Roles, Users } from './entities/user.entity';
 import type { RequestWithUser } from '../common/utils/request-with-user.interface';
+import { RolesGuard } from '../common/guard/roles.guard';
+import { HasRoles } from '../decorators/roles';
 
 @Controller('users')
 export class UsersController {

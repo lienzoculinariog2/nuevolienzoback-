@@ -185,7 +185,10 @@ export class ProductsService {
       query.andWhere('category.id = :categoryId', { categoryId });
     }
     if (name) {
-      query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
+      query.andWhere(
+        `(product.name ILIKE :search OR product.description ILIKE :search OR ingredients.name ILIKE :search)`,
+        { search: `%${name}%` },
+      );
     }
     if (price_min) {
       query.andWhere('product.price >= :price_min', { price_min });
