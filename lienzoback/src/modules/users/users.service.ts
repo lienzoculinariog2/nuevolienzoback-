@@ -12,6 +12,10 @@ export class UsersService {
     private readonly userRepository: Repository<Users>,
   ) {}
 
+  async findAll(): Promise<Users[]> {
+    return this.userRepository.find();
+  }
+
   async create(createUserDto: CreateUserDto): Promise<Users> {
     const existingUser = await this.userRepository.findOne({
       where: { id: createUserDto.id },
@@ -55,5 +59,38 @@ export class UsersService {
 
     await this.userRepository.save(user);
     return user;
+  }
+
+  async updateRole(id: string, newRole: Roles, currentUser: Users): Promise<Users> {
+    // Solo un admin puede cambiar roles
+    if (currentUser.roles !== Roles.ADMIN) {
+      throw new HttpException('No autorizado', HttpStatus.FORBIDDEN);
+    }
+
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    // Definir transiciones válidas
+    const allowedTransitions: Record<Roles, Roles[]> = {
+      [Roles.ADMIN]: [Roles.CUSTOMER], // admin -> user
+      [Roles.BANNED]: [Roles.CUSTOMER], // banned -> user
+      [Roles.CUSTOMER]: [Roles.ADMIN, Roles.BANNED], // user -> admin o banned
+    };
+
+    // Verificar si la transición está permitida
+    const canTransition = allowedTransitions[user.roles]?.includes(newRole);
+
+    if (!canTransition) {
+      throw new HttpException(
+        `No se puede cambiar de ${user.roles} a ${newRole}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Guardar nuevo rol
+    user.roles = newRole;
+    return await this.userRepository.save(user);
   }
 }

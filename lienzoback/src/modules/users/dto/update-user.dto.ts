@@ -26,7 +26,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   diet?: Diet;
 
   @IsOptional()
-  @IsEnum(Roles)
+  @IsEnum(Roles, { message: 'roles debe ser user, admin o banned' })
   roles?: Roles;
 
   @IsOptional()
