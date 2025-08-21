@@ -10,7 +10,7 @@ import { AddMultipleProductsToCartDto } from './dto/add-multiple-products.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
-import { CheckoutDto } from './dto/check-out.dto';
+import { CheckoutDto } from '../checkout/dto/check-out.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 
 @Injectable()

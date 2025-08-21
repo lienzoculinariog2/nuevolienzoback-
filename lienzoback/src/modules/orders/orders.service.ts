@@ -3,79 +3,225 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Orders, OrderStatus } from './entities/order.entity';
 import { OrderDetail } from './entities/order-detail.entity';
-import { Cart } from '../cart/entities/cart.entity';
+import { Products } from '../products/entities/product.entity';
+import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
 import { Users } from '../users/entities/user.entity';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
+import { DiscountCodesService } from '../discount-codes/discount-codes.service';
+import { Cart } from '../cart/entities/cart.entity';
+import { UpdateOrderDto } from './dto/update-order.dto';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Orders)
     private ordersRepository: Repository<Orders>,
+    @InjectRepository(Users)
+    private usersRepository: Repository<Users>,
     @InjectRepository(OrderDetail)
     private orderDetailRepository: Repository<OrderDetail>,
-    private dataSource: DataSource,
+    @InjectRepository(Products)
+    private productsRepository: Repository<Products>,
+    @InjectRepository(DiscountCodesUsed)
+    private discountCodesUsedRepository: Repository<DiscountCodesUsed>,
+    @InjectRepository(DiscountCodes)
+    private discountCodesRepository: Repository<DiscountCodes>,
+    @InjectRepository(Cart)
+    private cartRepository: Repository<Cart>,
+    private discountCodesService: DiscountCodesService,
   ) {}
 
-  async createOrderFromCart(userId: string): Promise<Orders> {
-    const user = await this.ordersRepository.manager.findOne(Users, {
-      where: { id: userId },
-    });
+  async createOrder(userId: string, createOrderDto: CreateOrderDto): Promise<Orders> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
     if (!user) {
-      throw new NotFoundException('User not found.');
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    return this.dataSource.transaction(async (entityManager) => {
-      const cart = await entityManager.findOne(Cart, {
-        where: { user: { id: userId } },
-        relations: ['items', 'items.product', 'user'],
-      });
+    let finalTotal = 0;
+    const items = createOrderDto.items;
+    let discount: DiscountCodes | null = null;
 
-      if (!cart || cart.items.length === 0) {
-        throw new BadRequestException('Cart is empty.');
-      }
-
-      for (const item of cart.items) {
-        if (item.product.stock < item.quantity) {
-          throw new BadRequestException(`Not enough stock for product: ${item.product.name}`);
+    if (createOrderDto.discountCode) {
+      discount = await this.discountCodesService.findOne(createOrderDto.discountCode);
+      if (discount && discount.isSingleUsePerUser) {
+        const usedCode = await this.discountCodesUsedRepository.findOne({
+          where: {
+            discountCode: { id: discount.id },
+            user: { id: userId },
+          },
+        });
+        if (usedCode) {
+          throw new BadRequestException('This discount code has already been used.');
         }
       }
+    }
+    const productValidations = new Map<string, Products>();
+    for (const itemDto of items) {
+      const product = await this.productsRepository.findOneBy({ id: itemDto.productId });
+      if (!product) {
+        throw new NotFoundException(`Product with id ${itemDto.productId} not found`);
+      }
+      if (product.stock === 0) {
+        throw new BadRequestException(`Product ${product.name} run out stock`);
+      }
+      if (product.stock < itemDto.quantity) {
+        throw new BadRequestException(`Insufficient stock for product ${product.name}`);
+      }
 
-      const total = cart.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+      productValidations.set(itemDto.productId, product);
+      finalTotal += itemDto.quantity * product.price;
+    }
+    if (discount) {
+      finalTotal = finalTotal - finalTotal * (discount.percentage / 100);
+    }
 
-      const newOrder = this.ordersRepository.create({
-        user: cart.user,
-        date: new Date(),
-        total: total,
-        statusOrder: OrderStatus.PENDING,
-        isPaid: false,
-      });
-      const savedOrder = await entityManager.save(newOrder);
-
-      const orderDetails = cart.items.map((item) => {
-        item.product.stock -= item.quantity;
-        return this.orderDetailRepository.create({
-          order: savedOrder,
-          product: item.product,
-          quantity: item.quantity,
-          unitPrice: item.product.price,
-        });
-      });
-
-      await entityManager.save(orderDetails);
-      await entityManager.save(cart.items.map((item) => item.product));
-      await entityManager.remove(cart.items);
-
-      return savedOrder;
+    // 1. Crear la nueva orden
+    const newOrder = this.ordersRepository.create({
+      user: user,
+      total: finalTotal,
+      date: new Date(),
+      statusOrder: OrderStatus.PENDING,
+      shippingAddress: createOrderDto.shippingAddress,
+      isPaid: true,
     });
+
+    await this.ordersRepository.save(newOrder);
+
+    if (discount) {
+      const discountUsed = new DiscountCodesUsed();
+      discountUsed.order = newOrder;
+      discountUsed.discountCode = discount;
+      discountUsed.usedAt = new Date();
+      discountUsed.user = user;
+
+      await this.discountCodesUsedRepository.save(discountUsed);
+    }
+
+    for (const itemDto of items) {
+      const product = productValidations.get(itemDto.productId);
+
+      if (!product) {
+        throw new NotFoundException(`Product with id ${itemDto.productId} not found`);
+      }
+
+      const orderDetail = new OrderDetail();
+      orderDetail.order = newOrder;
+      orderDetail.product = product;
+      orderDetail.quantity = itemDto.quantity;
+      orderDetail.unitPrice = product.price;
+
+      await this.orderDetailRepository.save(orderDetail);
+
+      product.stock -= itemDto.quantity;
+      await this.productsRepository.save(product);
+    }
+    const userCart = await this.cartRepository.findOne({
+      where: { user: { id: userId }, isActive: true },
+    });
+
+    if (userCart) {
+      await this.cartRepository.remove(userCart);
+    }
+
+    const finalOrder = await this.ordersRepository.findOne({
+      where: { id: newOrder.id },
+      relations: ['orderDetails', 'orderDetails.product', 'user'],
+    });
+
+    if (!finalOrder) {
+      throw new NotFoundException('Order not found after creation.');
+    }
+
+    return finalOrder;
   }
 
-  async findUserOrders(userId: string): Promise<Orders[]> {
+  async getAllOrders(status: OrderStatus | undefined): Promise<Orders[]> {
     return this.ordersRepository.find({
-      where: { user: { id: userId } },
-      relations: ['user', 'orderDetails', 'orderDetails.product'],
+      relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
       order: {
         date: 'DESC',
       },
     });
+  }
+
+  async getOrderById(userId: string): Promise<Orders[]> {
+    return this.ordersRepository.find({
+      where: { user: { id: userId } },
+      relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
+      order: {
+        date: 'DESC',
+      },
+    });
+  }
+  async updateOrder(orderId: string, updateOrderDto: UpdateOrderDto): Promise<Orders> {
+    const order = await this.ordersRepository.findOneBy({ id: orderId });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+    Object.assign(order, updateOrderDto);
+    return this.ordersRepository.save(order);
+  }
+
+  async cancelOrder(orderId: string): Promise<Orders> {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['orderDetails', 'orderDetails.product'],
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+    if (order.statusOrder === OrderStatus.CANCELED) {
+      throw new BadRequestException('Order is already canceled.');
+    }
+    // Regresar stock de productos
+    for (const detail of order.orderDetails) {
+      const product = await this.productsRepository.findOneBy({ id: detail.product.id });
+      if (product) {
+        product.stock += detail.quantity;
+        await this.productsRepository.save(product);
+      }
+    }
+    order.statusOrder = OrderStatus.CANCELED;
+    return this.ordersRepository.save(order);
+  }
+
+  async updateOrderStatus(orderId: string, newStatus: OrderStatus): Promise<Orders> {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['user'], // Necesitamos el usuario para la notificación por email
+    });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    if (newStatus === OrderStatus.SHIPPED && order.statusOrder !== OrderStatus.PENDING) {
+      throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
+    }
+    if (newStatus === OrderStatus.DELIVERED && order.statusOrder !== OrderStatus.SHIPPED) {
+      throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
+    }
+    if (
+      newStatus === OrderStatus.CANCELED &&
+      (order.statusOrder === OrderStatus.SHIPPED || order.statusOrder === OrderStatus.DELIVERED)
+    ) {
+      throw new BadRequestException('Cannot cancel a shipped or delivered order.');
+    }
+
+    order.statusOrder = newStatus;
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    // Simulación de envío de notificación por email
+    if (newStatus === OrderStatus.SHIPPED) {
+      console.log(
+        `Sending email notification to ${order.user.email}: Your order ${order.id} has been shipped!`,
+      );
+      // Aquí integrar Nodemailer
+    } else if (newStatus === OrderStatus.DELIVERED) {
+      console.log(`Order ${order.id} marked as DELIVERED by user.`);
+    }
+
+    return updatedOrder;
   }
 }
