@@ -4,6 +4,14 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "**/templates/*",
+        "outDir": "dist/modules/notificacions",
+        "watchAssets": true
+      }
+    ],
+    "watchAssets": true,
 
     "plugins": [
       {

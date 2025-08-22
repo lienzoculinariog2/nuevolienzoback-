@@ -19,6 +19,7 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { CommonModule } from './modules/common/common.module';
 import { MigrationService } from './modules/common/services/migration.service';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { MigrationService } from './modules/common/services/migration.service';
     CartModule,
     CheckoutModule,
     PaymentsModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],
@@ -61,11 +63,11 @@ export class AppModule implements OnModuleInit {
 
   async onModuleInit() {
     console.info('🔄 Iniciando aplicación...');
-    
+
     // Ejecutar migraciones primero
     console.info('📦 Ejecutando migraciones...');
     await this.migrationService.runMigrations();
-    
+
     console.info('🌱 Ejecutando seeders...');
 
     const areTablesPopulated = await this.productsService.isPopulated();

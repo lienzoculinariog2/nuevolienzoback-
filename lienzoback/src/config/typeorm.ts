@@ -34,7 +34,7 @@ const config = {
   url: isProduction ? process.env.DATABASE_URL : undefined,
   database: isProduction ? undefined : process.env.DB_NAME,
   host: isProduction ? undefined : process.env.DB_HOST,
-  port: isProduction ? undefined : (process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432),
+  port: isProduction ? undefined : process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
   // Sincronización deshabilitada para evitar tablas duplicadas

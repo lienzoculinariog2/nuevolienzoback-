@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .header {
+        text-align: center;
+        background-color: #080808;
+        color: white;
+        padding: 10px;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        padding: 20px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 1em;
+        color: #777;
+        margin-top: 20px;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #de6d03e2;
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h2>¡Gracias por tu compra!</h2>
+      </div>
+      <div class='content'>
+        <p>Hola {{order.user.name}},</p>
+        <p>Tu orden **#{{order.id}}** ha sido confirmada.</p>
+        <p>¡Gracias por confiar en Lienzo Culinario!</p>
+        <p style='text-align: center;'>
+          <a href='https://tu-ecommerce.com/ordenes/{{order.id}}' class='button'>Ver detalles de la
+            orden</a>
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Atentamente,<br />El equipo de Lienzo Culinario</p>
+      </div>
+    </div>
+  </body>
+</html>
