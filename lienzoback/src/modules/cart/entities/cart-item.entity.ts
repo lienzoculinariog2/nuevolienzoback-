@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 't
 import { Cart } from './cart.entity';
 import { Products } from '../../products/entities/product.entity';
 
-@Entity({ name: 'CART_ITEMS' })
+@Entity({ name: 'cart_items' })
 export class CartItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,4 +20,5 @@ export class CartItem {
   @ManyToOne(() => Products, (product) => product.cartItems)
   @JoinColumn({ name: 'product_id' })
   product: Products;
+  static userCart: any;
 }

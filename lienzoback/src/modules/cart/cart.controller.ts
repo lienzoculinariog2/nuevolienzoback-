@@ -3,9 +3,8 @@ import { CartService } from './cart.service';
 import { AddSingleProductToCartDto } from './dto/add-single-product.dto';
 import { AddMultipleProductsToCartDto } from './dto/add-multiple-products.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
-import { Cart } from './entities/cart.entity';
 import { Orders } from '../orders/entities/order.entity';
-import { CheckoutDto } from './dto/check-out.dto';
+import { CheckoutDto } from '../checkout/dto/check-out.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 import { CartItem } from './entities/cart-item.entity';
 
@@ -78,10 +77,5 @@ export class CartController {
     @Param('itemId', ParseUUIDPipe) itemId: string,
   ): Promise<CartItem> {
     return this.cartService.findCartItem(userId, itemId);
-  }
-
-  @Post('checkout/:userId')
-  checkout(@Param('userId') userId: string, @Body() checkoutDto: CheckoutDto): Promise<Orders> {
-    return this.cartService.checkout(userId, checkoutDto);
   }
 }
