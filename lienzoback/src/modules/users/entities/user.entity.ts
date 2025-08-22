@@ -18,7 +18,8 @@ export enum Diet {
   GENERAL = 'general',
   VEGETARIANO = 'vegetariano',
   CELIACO = 'celiaco',
-  FITNESS = 'fitness',
+  VEGAN = 'vegano',
+  LOW_CALORIES = 'diabetico',
 }
 
 export enum Roles {
