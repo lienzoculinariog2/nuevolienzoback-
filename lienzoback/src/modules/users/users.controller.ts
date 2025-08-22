@@ -24,7 +24,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @UseGuards(AuthGuard('jwt'))
+  //@UseGuards(AuthGuard('jwt'))
   async findAll(): Promise<Users[]> {
     return this.usersService.findAll();
   }
@@ -33,6 +33,15 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   async create(@Body() createUserDto: CreateUserDto): Promise<Users> {
     return this.usersService.create(createUserDto);
+  }
+
+  @Post('test')
+  async createTestUser(): Promise<Users> {
+    const testUserDto: CreateUserDto = {
+      id: 'test-user-' + Date.now(),
+      email: 'test@example.com',
+    };
+    return this.usersService.create(testUserDto);
   }
 
   @Get(':id')

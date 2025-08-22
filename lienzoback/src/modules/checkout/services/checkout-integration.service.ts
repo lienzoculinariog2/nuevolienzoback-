@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity';
+import { CartItem } from '../../cart/entities/cart-item.entity';
 import { Users } from '../../users/entities/user.entity';
 import { Orders, OrderStatus } from '../../orders/entities/order.entity';
 import { OrderDetail } from '../../orders/entities/order-detail.entity';
@@ -21,6 +22,8 @@ export class CheckoutIntegrationService {
   constructor(
     @InjectRepository(Cart)
     private cartRepository: Repository<Cart>,
+    @InjectRepository(CartItem)
+    private cartItemRepository: Repository<CartItem>,
     @InjectRepository(Users)
     private usersRepository: Repository<Users>,
     @InjectRepository(Orders)
@@ -130,7 +133,7 @@ export class CheckoutIntegrationService {
       }
 
       // 4. Vaciar el carrito del usuario
-      await this.cartService.clearCart(order.user.id);
+      await this.clearUserCart(order.user.id);
 
       // 5. Actualizar estado de la orden
       order.statusOrder = OrderStatus.PAID;
@@ -300,5 +303,28 @@ export class CheckoutIntegrationService {
   private async markDiscountCodeAsUsed(discountCodeUsed: DiscountCodesUsed): Promise<void> {
     discountCodeUsed.usedAt = new Date();
     await this.discountCodesUsedRepository.save(discountCodeUsed);
+  }
+
+  /**
+   * Vaciar el carrito del usuario completamente
+   */
+  private async clearUserCart(userId: string): Promise<void> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (cart && cart.items && cart.items.length > 0) {
+      // Eliminar todos los items del carrito
+      await this.cartItemRepository.remove(cart.items);
+      
+      // Marcar el carrito como inactivo
+      cart.isActive = false;
+      await this.cartRepository.save(cart);
+      
+      this.logger.log(`Carrito vaciado exitosamente para usuario: ${userId}`);
+    } else {
+      this.logger.log(`No se encontró carrito para vaciar para usuario: ${userId}`);
+    }
   }
 }
