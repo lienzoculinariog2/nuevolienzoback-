@@ -13,6 +13,7 @@ export class OrdersController {
     @Param('userId') userId: string,
     @Body() createOrderDto: CreateOrderDto,
   ): Promise<Orders> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.ordersService.createOrder(userId, createOrderDto);
   }
 
