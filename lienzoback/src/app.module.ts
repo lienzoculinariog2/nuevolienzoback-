@@ -17,6 +17,8 @@ import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { IngredientsService } from './modules/ingredients/ingredients.service';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { CommonModule } from './modules/common/common.module';
+import { MigrationService } from './modules/common/services/migration.service';
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
       useFactory: (configService: ConfigService) => configService.get('typeorm')!,
     }),
 
+    CommonModule,
     UsersModule,
     ProductsModule,
     CategoriesModule,
@@ -53,26 +56,33 @@ export class AppModule implements OnModuleInit {
     private readonly categoriesService: CategoriesService,
     private readonly productsService: ProductsService,
     private readonly ingredientsService: IngredientsService,
+    private readonly migrationService: MigrationService,
   ) {}
 
   async onModuleInit() {
-    console.info('Running all seeders...');
+    console.info('🔄 Iniciando aplicación...');
+    
+    // Ejecutar migraciones primero
+    console.info('📦 Ejecutando migraciones...');
+    await this.migrationService.runMigrations();
+    
+    console.info('🌱 Ejecutando seeders...');
 
     const areTablesPopulated = await this.productsService.isPopulated();
     if (areTablesPopulated) {
-      console.log('Database already populated. Skipping seeder.');
+      console.log('✅ Base de datos ya poblada. Saltando seeders.');
       return;
     }
 
-    console.log('Seeding categories...');
+    console.log('🌱 Sembrando categorías...');
     await this.categoriesService.seedCategories();
 
-    console.log('Seeding ingredients...');
+    console.log('🌱 Sembrando ingredientes...');
     await this.ingredientsService.seedIngredients();
 
-    console.log('Seeding products and linking relationships...');
+    console.log('🌱 Sembrando productos y vinculando relaciones...');
     await this.productsService.seedProducts();
 
-    console.log('Seeder finished successfully.');
+    console.log('✅ Seeders completados exitosamente.');
   }
 }
