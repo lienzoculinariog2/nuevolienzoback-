@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 't
 import { Users } from 'src/modules/users/entities/user.entity';
 import { Products } from 'src/modules/products/entities/product.entity';
 
-@Entity({ name: 'REVIEWS' })
+@Entity({ name: 'reviews' })
 export class Reviews {
   @PrimaryGeneratedColumn('uuid')
   id: string;

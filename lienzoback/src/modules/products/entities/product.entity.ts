@@ -15,7 +15,7 @@ import {
 
 import { OneToMany } from 'typeorm';
 
-@Entity('PRODUCTOS')
+@Entity('productos')
 export class Products {
   static image(image: any) {
     throw new Error('Method not implemented.');
@@ -51,7 +51,7 @@ export class Products {
     cascade: ['insert', 'update'],
   })
   @JoinTable({
-    name: 'PRODUCTS_INGREDIENTS',
+    name: 'products_ingredients',
     joinColumn: {
       name: 'products_id',
       referencedColumnName: 'id',
