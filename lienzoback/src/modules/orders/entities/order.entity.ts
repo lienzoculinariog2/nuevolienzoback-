@@ -10,7 +10,7 @@ export enum OrderStatus {
   CANCELED = 'canceled',
 }
 
-@Entity({ name: 'ORDERS' })
+@Entity({ name: 'orders' })
 export class Orders {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,9 +20,6 @@ export class Orders {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   total: number;
-
-  @Column({ name: 'discount_id', type: 'int', nullable: true })
-  discountId: number;
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   statusOrder: OrderStatus;

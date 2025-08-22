@@ -15,6 +15,7 @@ import { ReviewsModule } from './modules/product-review/reviews.module';
 import { CartModule } from './modules/cart/cart.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { IngredientsService } from './modules/ingredients/ingredients.service';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { IngredientsService } from './modules/ingredients/ingredients.service';
     DiscountCodesModule,
     IngredientsModule,
     CartModule,
+    CheckoutModule,
   ],
   controllers: [],
   providers: [],
