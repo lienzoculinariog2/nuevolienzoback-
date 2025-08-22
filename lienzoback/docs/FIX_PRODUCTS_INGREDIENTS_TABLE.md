@@ -26,40 +26,20 @@ La tabla de relación many-to-many entre `products` e `ingredients` no se creó 
    TYPEORM_DROP=false
    ```
 
-### **Opción 2: Ejecutar migración manual**
+### **Opción 2: Ejecutar migración de TypeORM**
 
-#### **En la base de datos de Render:**
-1. Conectar a la base de datos PostgreSQL
-2. Ejecutar el script: `scripts/fix-products-ingredients-table.sql`
-
-### **Opción 3: Ejecutar comando SQL directo**
-
-```sql
--- Crear tabla de relación
-CREATE TABLE IF NOT EXISTS "products_ingredients" (
-  "products_id" uuid NOT NULL,
-  "ingredients_id" uuid NOT NULL,
-  CONSTRAINT "PK_products_ingredients" PRIMARY KEY ("products_id", "ingredients_id")
-);
-
--- Crear índices
-CREATE INDEX IF NOT EXISTS "IDX_products_ingredients_products_id" 
-ON "products_ingredients" ("products_id");
-
-CREATE INDEX IF NOT EXISTS "IDX_products_ingredients_ingredients_id" 
-ON "products_ingredients" ("ingredients_id");
-
--- Agregar foreign keys
-ALTER TABLE "products_ingredients" 
-ADD CONSTRAINT "FK_products_ingredients_products_id" 
-FOREIGN KEY ("products_id") REFERENCES "products"("id") 
-ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE "products_ingredients" 
-ADD CONSTRAINT "FK_products_ingredients_ingredients_id" 
-FOREIGN KEY ("ingredients_id") REFERENCES "ingredients"("id") 
-ON DELETE CASCADE ON UPDATE CASCADE;
-```
+#### **En Render Dashboard:**
+1. Habilitar sincronización temporal:
+   ```
+   TYPEORM_SYNC=true
+   TYPEORM_DROP=false
+   ```
+2. **Redeploy** la aplicación
+3. Una vez que funcione, deshabilitar sincronización:
+   ```
+   TYPEORM_SYNC=false
+   TYPEORM_DROP=false
+   ```
 
 ## 📊 **Verificación**
 
@@ -136,6 +116,5 @@ ORDER BY table_name;
 ## ✅ **Estado de la Solución**
 
 - [x] Migración creada: `1703123456791-CreateProductsIngredientsTable.ts`
-- [x] Script SQL creado: `scripts/fix-products-ingredients-table.sql`
 - [x] Documentación completa
 - [ ] Aplicar en Render (pendiente)
