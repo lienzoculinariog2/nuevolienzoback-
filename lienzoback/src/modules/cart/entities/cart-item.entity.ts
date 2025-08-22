@@ -20,4 +20,5 @@ export class CartItem {
   @ManyToOne(() => Products, (product) => product.cartItems)
   @JoinColumn({ name: 'product_id' })
   product: Products;
+  static userCart: any;
 }

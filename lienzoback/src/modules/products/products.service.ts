@@ -172,7 +172,7 @@ export class ProductsService {
       sortBy,
       order = 'asc',
       page = 1,
-      limit = 20,
+      limit = 12,
     } = filterDto;
 
     const query = this.productsRepository.createQueryBuilder('product');

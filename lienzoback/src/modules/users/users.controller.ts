@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
   ForbiddenException,
+  Put,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
@@ -21,6 +22,12 @@ import { HasRoles } from '../decorators/roles';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  @UseGuards(AuthGuard('jwt'))
+  async findAll(): Promise<Users[]> {
+    return this.usersService.findAll();
+  }
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
@@ -45,5 +52,18 @@ export class UsersController {
       throw new ForbiddenException('No tienes permiso para actualizar este perfil.');
     }
     return this.usersService.update(id, updateUserDto);
+  }
+
+  // PATCH /users/:id/role
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @HasRoles(Roles.ADMIN)
+  @Patch(':id/role')
+  async updateRole(
+    @Param('id') id: string,
+    @Body('newRole') newRole: Roles, // 👈 viene en el body
+    @Req() req,
+  ) {
+    const currentUser = req.user; // 👈 usuario logueado extraído del token JWT
+    return this.usersService.updateRole(id, newRole, currentUser);
   }
 }

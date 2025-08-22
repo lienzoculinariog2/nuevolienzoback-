@@ -51,7 +51,7 @@ export class Products {
     cascade: ['insert', 'update'],
   })
   @JoinTable({
-    name: 'PRODUCTS_INGREDIENTS',
+    name: 'products_ingredients',
     joinColumn: {
       name: 'products_id',
       referencedColumnName: 'id',

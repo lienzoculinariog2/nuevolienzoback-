@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column } from 'typeorm';
 import { Users } from 'src/modules/users/entities/user.entity';
 import { DiscountCodes } from 'src/modules/discount-codes/entities/discount-codes.entity';
 import { Orders } from 'src/modules/orders/entities/order.entity';
@@ -7,6 +7,9 @@ import { Orders } from 'src/modules/orders/entities/order.entity';
 export class DiscountCodesUsed {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ name: 'used_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  usedAt: Date;
 
   @ManyToOne(() => Users, (user) => user.discountCodesUsed)
   @JoinColumn({ name: 'user_id' })

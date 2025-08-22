@@ -15,6 +15,7 @@ import { ReviewsModule } from './modules/product-review/reviews.module';
 import { CartModule } from './modules/cart/cart.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { IngredientsService } from './modules/ingredients/ingredients.service';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
@@ -22,8 +23,6 @@ import { PaymentsModule } from './modules/payments/payments.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeOrmConfig],
-      envFilePath: process.env.NODE_ENV === 'production' ? undefined : '.env.development',
-      ignoreEnvFile: process.env.NODE_ENV === 'production', // Ignorar archivos .env en producción
     }),
 
     TypeOrmModule.forRootAsync({
@@ -42,6 +41,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     DiscountCodesModule,
     IngredientsModule,
     CartModule,
+    CheckoutModule,
     PaymentsModule,
   ],
   controllers: [],

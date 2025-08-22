@@ -14,7 +14,7 @@ export class CreateProductDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ example: 12.99, description: 'Precio del producto en dólares' })
+  @ApiProperty({ example: 12.99, description: 'Precio del producto' })
   @IsNumber()
   @Type(() => Number)
   price: number;
