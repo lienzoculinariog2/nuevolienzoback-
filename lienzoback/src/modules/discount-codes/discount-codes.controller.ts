@@ -1,34 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, Query } from '@nestjs/common';
 import { DiscountCodesService } from './discount-codes.service';
 import { CreateDiscountCodeDto } from './dto/create-discount-code.dto';
 import { UpdateDiscountCodeDto } from './dto/update-discount-code.dto';
+import { DiscountCodes } from './entities/discount-codes.entity';
+import { DiscountCodesFilterDto } from './dto/discount-codes-filter.dto';
 
 @Controller('discount-codes')
 export class DiscountCodesController {
   constructor(private readonly discountCodesService: DiscountCodesService) {}
 
   @Post()
-  create(@Body() createDiscountCodeDto: CreateDiscountCodeDto) {
-    return this.discountCodesService.create(createDiscountCodeDto);
+  async createDiscountCode(@Body() createDto: CreateDiscountCodeDto) {
+    const newCode = await this.discountCodesService.createDiscountCode(createDto);
+
+    return {
+      message: 'Discount code successfully generated.',
+      code: newCode.code,
+      percentage: newCode.percentage,
+      validUntil: newCode.validUntil,
+    };
   }
 
   @Get()
-  findAll() {
-    return this.discountCodesService.findAll();
+  async findAll(@Query() filterDto: DiscountCodesFilterDto): Promise<DiscountCodes[]> {
+    const discounts = await this.discountCodesService.findAll(filterDto);
+    return discounts;
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.discountCodesService.findOne(+id);
+  @Get(':code')
+  async findOne(@Param('code') code: string) {
+    const discount = await this.discountCodesService.findOne(code);
+
+    return {
+      message: 'Discount code is valid.',
+      code: discount.code,
+      percentage: discount.percentage,
+      validUntil: discount.validUntil,
+    };
   }
 
-  @Patch(':id')
+  @Put(':id')
   update(@Param('id') id: string, @Body() updateDiscountCodeDto: UpdateDiscountCodeDto) {
-    return this.discountCodesService.update(+id, updateDiscountCodeDto);
+    return this.discountCodesService.update(id, updateDiscountCodeDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.discountCodesService.remove(+id);
+  @Put('inactivate/:id')
+  async inactivate(@Param('id') id: string) {
+    await this.discountCodesService.inactivate(id);
+    return { message: 'Discount code successfully inactivated.' };
+  }
+
+  @Put('activate/:id')
+  async activate(@Param('id') id: string) {
+    await this.discountCodesService.activate(id);
+    return { message: 'Discount code successfully activated.' };
   }
 }

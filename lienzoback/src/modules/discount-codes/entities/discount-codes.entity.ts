@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
 
-@Entity({ name: 'DISCOUNT_CODES' })
+@Entity({ name: 'discount_codes' })
 export class DiscountCodes {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -9,10 +9,10 @@ export class DiscountCodes {
   @Column({ unique: true })
   code: string;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2 })
+  @Column({ type: 'decimal', precision: 3 })
   percentage: number;
 
-  @Column({ name: 'is_single_use_per_user', default: false })
+  @Column({ name: 'is_single_use_per_user', default: true })
   isSingleUsePerUser: boolean;
 
   @Column({ name: 'is_active', default: true })
