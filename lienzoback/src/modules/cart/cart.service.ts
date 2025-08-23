@@ -363,7 +363,10 @@ export class CartService {
     let subTotal = 0;
     let totalItems = 0;
 
-    const itemsResponse = cart.items.map((item) => {
+    // Filtrar items que tienen productos válidos
+    const validItems = cart.items.filter(item => item.product !== null);
+
+    const itemsResponse = validItems.map((item) => {
       const totalItemPrice = item.quantity * item.product.price;
       subTotal += totalItemPrice;
       totalItems += item.quantity;
