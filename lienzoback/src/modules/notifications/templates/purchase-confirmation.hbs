@@ -37,6 +37,29 @@
         text-decoration: none;
         border-radius: 5px;
       }
+      .order-details,
+      .product-list {
+        margin-top: 20px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      }
+      .product-list table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .product-list th,
+      .product-list td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .product-list th {
+        background-color: #f2f2f2;
+      }
+      .total-row {
+        font-weight: bold;
+      }
+      
     </style>
   </head>
   <body>
@@ -47,10 +70,47 @@
       <div class='content'>
         <p>Hola {{order.user.name}},</p>
         <p>Tu orden **#{{order.id}}** ha sido confirmada.</p>
+
+        <div class='order-details'>
+          <h3>Resumen de tu pedido:</h3>
+          <p><strong>Fecha del pedido:</strong> {{dateFormat order.date}}</p>
+          <p><strong>Estado del pedido:</strong> {{order.statusOrder}}</p>
+          <p><strong>Dirección de envío:</strong> {{order.shippingAddress}}</p>
+          <p><strong>Total pagado:</strong> ${{order.total}}</p>
+        </div>
+
+        <div class='product-list'>
+          <h3>Productos:</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unitario</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each order.orderDetails}}
+                <tr>
+                  <td>{{this.product.name}}</td>
+                  <td>{{this.quantity}}</td>
+                  <td>${{this.unitPrice}}</td>
+                  <td>${{multiply this.quantity this.unitPrice}}</td>
+                </tr>
+              {{/each}}
+              <tr class='total-row'>
+                <td colspan='3' style='text-align: right;'>Total:</td>
+                <td>${{order.total}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <p>¡Gracias por confiar en Lienzo Culinario!</p>
         <p style='text-align: center;'>
-          <a href='https://tu-ecommerce.com/ordenes/{{order.id}}' class='button'>Ver detalles de la
-            orden</a>
+          <a href='https://lienzofront.vercel.app/orders/{{order.id}}' class='button'>Ver detalles
+            de la orden</a>
         </p>
       </div>
       <div class='footer'>

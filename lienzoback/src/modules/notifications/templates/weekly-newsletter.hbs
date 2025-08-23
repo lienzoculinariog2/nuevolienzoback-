@@ -43,23 +43,28 @@
         color: #777;
         margin-top: 20px;
       }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #de6d03e2;
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+      }
     </style>
   </head>
   <body>
     <div class='container'>
       <div class='header'>
-        <h2>Platos de la semana - Lienzo Culinario</h2>
+        <h2>Lienzos de la semana - Lienzo Culinario</h2>
       </div>
       <div class='content'>
         <p>Hola {{name}},</p>
-        <p>Aquí tienes nuestros platos destacados de esta semana:</p>
-        {{#each products}}
-          <div class='product-item'>
-            <h3>{{name}}</h3>
-            <p>{{description}}</p>
-            <p><strong>Precio: ${{price}}</strong></p>
-          </div>
-        {{/each}}
+        <p>Visita nuestra página web para que conozcas las obras culinarias de esta semana:</p>
+        <p style='text-align: center;'>
+          <a href='https://lienzofront.vercel.app' class='button'>Explorar las obras</a>
+        </p>
+        <p>Si tienes alguna pregunta, no dudes en contactarnos. ¡Estamos aquí para ayudarte!</p>
       </div>
       <div class='footer'>
         <p>Atentamente,<br />El equipo de Lienzo Culinario</p>

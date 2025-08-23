@@ -56,7 +56,7 @@ export class NotificationsService {
       for (const user of subscribedUsers) {
         await this.mailerService.sendMail({
           to: user.email,
-          subject: 'Platos de la semana en Lienzo Culinario',
+          subject: 'Obras culinarias de la semana 🧑‍🍳',
           template: 'weekly-newsletter',
           context: {
             name: user.name,
