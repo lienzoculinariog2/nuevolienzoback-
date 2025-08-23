@@ -1,14 +1,17 @@
 import { Controller, Post, Get, Param, Body, ParseUUIDPipe, Put, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { Orders, OrderStatus } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
+@ApiTags('orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post(':userId')
+  @ApiOperation({ summary: 'Create a new order' })
   async createOrder(
     @Param('userId') userId: string,
     @Body() createOrderDto: CreateOrderDto,
@@ -17,6 +20,14 @@ export class OrdersController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all orders (optionally filtered by status)' })
+  @ApiQuery({ 
+    name: 'status', 
+    required: false, 
+    enum: OrderStatus,
+    description: 'Filter orders by status (optional)' 
+  })
+  @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
   getAllOrders(@Query('status') status?: OrderStatus): Promise<Orders[]> {
     return this.ordersService.getAllOrders(status);
   }
