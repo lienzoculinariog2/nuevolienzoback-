@@ -10,27 +10,29 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post(':userId')
-  @ApiOperation({ summary: 'Create a new order' })
-  async createOrder(
-    @Param('userId') userId: string,
-    @Body() createOrderDto: CreateOrderDto,
-  ): Promise<Orders> {
-    return this.ordersService.createOrder(userId, createOrderDto);
-  }
+  // 🚫 DESHABILITADO: Crear orden manualmente (se crea automáticamente en checkout)
+  // @Post(':userId')
+  // @ApiOperation({ summary: 'Create a new order' })
+  // async createOrder(
+  //   @Param('userId') userId: string,
+  //   @Body() createOrderDto: CreateOrderDto,
+  // ): Promise<Orders> {
+  //   return this.ordersService.createOrder(userId, createOrderDto);
+  // }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all orders (optionally filtered by status)' })
-  @ApiQuery({ 
-    name: 'status', 
-    required: false, 
-    enum: OrderStatus,
-    description: 'Filter orders by status (optional)' 
-  })
-  @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
-  getAllOrders(@Query('status') status?: OrderStatus): Promise<Orders[]> {
-    return this.ordersService.getAllOrders(status);
-  }
+  // 🚫 DESHABILITADO: Obtener todas las órdenes (solo admin)
+  // @Get()
+  // @ApiOperation({ summary: 'Get all orders (optionally filtered by status)' })
+  // @ApiQuery({ 
+  //   name: 'status', 
+  //   required: false, 
+  //   enum: OrderStatus,
+  //   description: 'Filter orders by status (optional)' 
+  // })
+  // @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
+  // getAllOrders(@Query('status') status?: OrderStatus): Promise<Orders[]> {
+  //   return this.ordersService.getAllOrders(status);
+  // }
 
   @Get('user/:userId')
   getUserOrders(@Param('userId') userId: string): Promise<Orders[]> {
@@ -42,24 +44,27 @@ export class OrdersController {
     return this.ordersService.findOrderById(orderId);
   }
 
-  @Put(':orderId')
-  updateOrder(
-    @Param('orderId') orderId: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-  ): Promise<Orders> {
-    return this.ordersService.updateOrder(orderId, updateOrderDto);
-  }
+  // 🚫 DESHABILITADO: Actualizar orden manualmente (se actualiza automáticamente)
+  // @Put(':orderId')
+  // updateOrder(
+  //   @Param('orderId') orderId: string,
+  //   @Body() updateOrderDto: UpdateOrderDto,
+  // ): Promise<Orders> {
+  //   return this.ordersService.updateOrder(orderId, updateOrderDto);
+  // }
 
-  @Put(':orderId/cancel')
-  cancelOrder(@Param('orderId') orderId: string): Promise<Orders> {
-    return this.ordersService.cancelOrder(orderId);
-  }
+  // 🚫 DESHABILITADO: Cancelar orden (no necesario para flujo de compra)
+  // @Put(':orderId/cancel')
+  // cancelOrder(@Param('orderId') orderId: string): Promise<Orders> {
+  //   return this.ordersService.cancelOrder(orderId);
+  // }
 
-  @Put(':orderId/status')
-  async updateOrderStatus(
-    @Param('orderId', ParseUUIDPipe) orderId: string,
-    @Body('newStatus') newStatus: OrderStatus,
-  ): Promise<Orders> {
-    return this.ordersService.updateOrderStatus(orderId, newStatus);
-  }
+  // 🚫 DESHABILITADO: Actualizar estado de orden (se actualiza automáticamente)
+  // @Put(':orderId/status')
+  // async updateOrderStatus(
+  //   @Param('orderId', ParseUUIDPipe) orderId: string,
+  //   @Body('newStatus') newStatus: OrderStatus,
+  // ): Promise<Orders> {
+  //   return this.ordersService.updateOrderStatus(orderId, newStatus);
+  // }
 }

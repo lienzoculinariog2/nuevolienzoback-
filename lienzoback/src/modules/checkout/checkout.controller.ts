@@ -12,12 +12,13 @@ export class CheckoutController {
     private readonly checkoutIntegrationService: CheckoutIntegrationService,
   ) {}
 
-  @Post(':userId')
-  @ApiOperation({ summary: 'Procesar checkout básico (solo validación)' })
-  @ApiResponse({ status: 200, description: 'Checkout procesado exitosamente' })
-  async checkout(@Param('userId') userId: string, @Body() checkoutDto: CheckoutDto) {
-    return this.checkoutService.checkout(userId, checkoutDto);
-  }
+  // 🚫 DESHABILITADO: Checkout básico (no necesario para flujo de compra)
+  // @Post(':userId')
+  // @ApiOperation({ summary: 'Procesar checkout básico (solo validación)' })
+  // @ApiResponse({ status: 200, description: 'Checkout procesado exitosamente' })
+  // async checkout(@Param('userId') userId: string, @Body() checkoutDto: CheckoutDto) {
+  //   return this.checkoutService.checkout(userId, checkoutDto);
+  // }
 
   @Post(':userId/complete')
   @ApiOperation({ summary: 'Procesar checkout completo con integración de pago' })
@@ -34,10 +35,11 @@ export class CheckoutController {
     return { message: 'Pago procesado exitosamente' };
   }
 
-  @Get('diagnose/:userId')
-  @ApiOperation({ summary: 'Diagnosticar carrito del usuario (solo lectura)' })
-  @ApiResponse({ status: 200, description: 'Diagnóstico completado' })
-  async diagnoseCart(@Param('userId') userId: string) {
-    return this.checkoutService.diagnoseCart(userId);
-  }
+  // 🚫 DESHABILITADO: Diagnóstico de carrito (solo para debugging)
+  // @Get('diagnose/:userId')
+  // @ApiOperation({ summary: 'Diagnosticar carrito del usuario (solo lectura)' })
+  // @ApiResponse({ status: 200, description: 'Diagnóstico completado' })
+  // async diagnoseCart(@Param('userId') userId: string) {
+  //   return this.checkoutService.diagnoseCart(userId);
+  // }
 }

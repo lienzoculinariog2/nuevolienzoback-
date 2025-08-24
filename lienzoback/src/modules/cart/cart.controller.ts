@@ -12,21 +12,22 @@ import { CartItem } from './entities/cart-item.entity';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Get('active')
-  findActiveCarts() {
-    return this.cartService.findAllActive();
-  }
+  // 🚫 DESHABILITADO: Gestión de carritos activos/inactivos (solo admin)
+  // @Get('active')
+  // findActiveCarts() {
+  //   return this.cartService.findAllActive();
+  // }
 
-  @Get('inactive')
-  findInactiveCarts() {
-    return this.cartService.findInactive();
-  }
+  // @Get('inactive')
+  // findInactiveCarts() {
+  //   return this.cartService.findInactive();
+  // }
 
-  @Delete('inactive')
-  async removeInactiveCarts() {
-    await this.cartService.removeInactiveCarts();
-    return { message: 'All inactive carts have been removed successfully.' };
-  }
+  // @Delete('inactive')
+  // async removeInactiveCarts() {
+  //   await this.cartService.removeInactiveCarts();
+  //   return { message: 'All inactive carts have been removed successfully.' };
+  // }
 
   @Get(':userId')
   getCart(@Param('userId') userId: string): Promise<FullCartSummaryDto> {
@@ -41,13 +42,14 @@ export class CartController {
     return this.cartService.addSingleProductToCart(userId, addDto);
   }
 
-  @Post('addmultiple/:userId')
-  addMultipleProductsToCart(
-    @Param('userId') userId: string,
-    @Body() addMultipleDto: AddMultipleProductsToCartDto,
-  ): Promise<FullCartSummaryDto> {
-    return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
-  }
+  // 🚫 DESHABILITADO: Agregar múltiples productos (no necesario para flujo de compra)
+  // @Post('addmultiple/:userId')
+  // addMultipleProductsToCart(
+  //   @Param('userId') userId: string,
+  //   @Body() addMultipleDto: AddMultipleProductsToCartDto,
+  // ): Promise<FullCartSummaryDto> {
+  //   return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
+  // }
 
   @Put(':userId')
   updateCartItems(
@@ -71,11 +73,12 @@ export class CartController {
     return { message: 'Cart has been successfully cleared.' };
   }
 
-  @Get(':userId/:itemId')
-  findCartItem(
-    @Param('userId') userId: string,
-    @Param('itemId', ParseUUIDPipe) itemId: string,
-  ): Promise<CartItem> {
-    return this.cartService.findCartItem(userId, itemId);
-  }
+  // 🚫 DESHABILITADO: Buscar item específico del carrito (no necesario para flujo de compra)
+  // @Get(':userId/:itemId')
+  // findCartItem(
+  //   @Param('userId') userId: string,
+  //   @Param('itemId', ParseUUIDPipe) itemId: string,
+  // ): Promise<CartItem> {
+  //   return this.cartService.findCartItem(userId, itemId);
+  // }
 }
