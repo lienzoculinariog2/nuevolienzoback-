@@ -27,6 +27,7 @@
     "schema:sync": "npm run typeorm -- schema:sync -d typeorm.config.ts",
     "schema:drop": "npm run typeorm -- schema:drop -d typeorm.config.ts",
     "migrate": "node run-migrations.js",
+    "migrate:render": "node render-migrations.js",
     "clean-tables": "node clean-duplicate-tables.js"
   },
   "dependencies": {
