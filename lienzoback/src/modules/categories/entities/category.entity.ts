@@ -1,7 +1,8 @@
 import { Products } from 'src/modules/products/entities/product.entity';
+import { Users } from 'src/modules/users/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
-@Entity({ name: 'CATEGORIES' })
+@Entity({ name: 'categories' })
 export class Categories {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -9,7 +10,7 @@ export class Categories {
   @Column({ type: 'varchar', length: 50, nullable: false, unique: true })
   name: string;
 
-  @Column({ type: 'varchar', length: 200, nullable: false })
+  @Column({ type: 'varchar', length: 255, nullable: false, default: 'Sin descripción' })
   description: string;
 
   @Column({
@@ -21,6 +22,10 @@ export class Categories {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => Products, (product) => product.categoryId)
+  @OneToMany(() => Products, (product) => product.category)
   product: Products[];
+
+  // categoría de preferencia de un usuario
+  @OneToMany(() => Users, (user) => user.category)
+  users: Users[];
 }

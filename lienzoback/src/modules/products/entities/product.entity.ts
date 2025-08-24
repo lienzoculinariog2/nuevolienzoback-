@@ -1,14 +1,29 @@
+import { CartItem } from 'src/modules/cart/entities/cart-item.entity';
 import { Categories } from 'src/modules/categories/entities/category.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Ingredients } from 'src/modules/ingredients/entities/ingredient.entity';
+import { OrderDetail } from 'src/modules/orders/entities/order-detail.entity';
+import { Reviews } from 'src/modules/product-review/entities/review.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 
 import { OneToMany } from 'typeorm';
 
-@Entity('products')
+@Entity({ name: 'products' })
 export class Products {
+  static image(image: any) {
+    throw new Error('Method not implemented.');
+  }
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, unique: true })
   name: string;
 
   @Column({ type: 'text' })
@@ -22,7 +37,7 @@ export class Products {
 
   @Column({
     type: 'text',
-    default: 'No image',
+    nullable: true,
   })
   imgUrl?: string | null;
 
@@ -32,11 +47,33 @@ export class Products {
   @Column({ type: 'int', nullable: true })
   caloricLevel: number;
 
-  @Column('simple-array', { nullable: true })
-  ingredients: string[];
+  @ManyToMany(() => Ingredients, (ingredient) => ingredient.products, {
+    cascade: ['insert', 'update'],
+  })
+  @JoinTable({
+    name: 'products_ingredients',
+    joinColumn: {
+      name: 'products_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'ingredients_id',
+      referencedColumnName: 'id',
+    },
+  })
+  ingredients: Ingredients[];
 
   @ManyToOne(() => Categories, (category) => category.product)
   @JoinColumn({ name: 'category_id' })
-  categoryId: Categories;
+  category: Categories;
   secure_url: string | undefined;
+
+  @OneToMany(() => Reviews, (review) => review.product)
+  reviews: Reviews[];
+
+  @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.product)
+  orderDetails: OrderDetail[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.product)
+  cartItems: CartItem[];
 }

@@ -1,49 +1,93 @@
-// import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
-// import { Category } from './category.entity';
-// import { Order } from './order.entity';
-// import { Review } from './review.entity';
-// import { DiscountCodesUsed } from './discount-codes-used.entity';
-// import { Categories } from 'src/modules/categories/entities/category.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
+import { Orders } from 'src/modules/orders/entities/order.entity';
+import { Reviews } from 'src/modules/product-review/entities/review.entity';
+import { DiscountCodesUsed } from 'src/modules/discount-codes/entities/discount-codes-used.entity';
+import { Categories } from 'src/modules/categories/entities/category.entity';
+import { Cart } from 'src/modules/cart/entities/cart.entity';
 
-// @Entity('users')
-// export class User {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+export enum Diet {
+  GENERAL = 'general',
+  VEGETARIANO = 'vegetariano',
+  CELIACO = 'celiaco',
+  VEGAN = 'vegano',
+  LOW_CALORIES = 'diabetico',
+}
 
-//   @Column({ length: 255 })
-//   name: string;
+export enum Roles {
+  CUSTOMER = 'user',
+  ADMIN = 'admin',
+  BANNED = 'banned',
+}
 
-//   @Column({ length: 255, unique: true })
-//   email: string;
+@Entity({ name: 'users' })
+export class Users {
+  @PrimaryColumn()
+  id: string;
 
-//   @Column({ name: 'password', length: 255 })
-//   passwordHash: string;
+  @Column({ nullable: true })
+  name: string;
 
-//   @Column({ nullable: true })
-//   address: string;
+  @Column({ unique: true })
+  email: string;
 
-//   @Column({ type: 'bigint', nullable: true })
-//   phone: number;
+  // --- CORRECCIÓN DE SEGURIDAD ---
+  // Añadimos `{ select: false }` a la columna de la contraseña.
+  // Esto le dice a TypeORM que NUNCA incluya este campo en las consultas
+  // a menos que se pida explícitamente.
+  // Así, nunca se enviará al frontend.
+  @Column({ nullable: true, select: false })
+  password?: string;
 
-//   @Column({ type: 'date', nullable: true })
-//   birthday: Date;
+  @Column({ nullable: true })
+  address: string;
 
-//   @Column({ type: 'enum', enum: ['admin', 'user', 'guest'], default: 'user' })
-//   isAdmin: string;
+  @Column({ type: 'bigint', nullable: true })
+  phone: number;
 
-//   @Column({ nullable: true })
-//   categoryId: string;
+  @Column({
+    type: 'enum',
+    enum: Diet,
+    default: Diet.GENERAL,
+  })
+  diet: Diet;
 
-//   @ManyToOne(() => Categories, (category) => category.users)
-//   @JoinColumn({ name: 'categoryId' })
-//   category: Category;
+  @Column({ type: 'timestamp', nullable: true })
+  birthday: Date;
 
-//   //   @OneToMany(() => Order, (order) => order.user)
-//   //   orders: Order[];
+  @Column({
+    type: 'enum',
+    enum: Roles,
+    default: Roles.CUSTOMER,
+  })
+  roles: Roles;
 
-//   //   @OneToMany(() => Review, (review) => review.user)
-//   //   reviews: Review[];
+  @Column({ default: false })
+  isSuscribed: boolean;
 
-//   //   @OneToMany(() => DiscountCodesUsed, (discountCodeUsed) => discountCodeUsed.user)
-//   //   discountCodesUsed: DiscountCodesUsed[];
-// }
+  @OneToMany(() => Orders, (order) => order.user)
+  orders: Orders[];
+
+  @OneToMany(() => Reviews, (review) => review.user)
+  reviews: Reviews[];
+
+  @OneToMany(() => DiscountCodesUsed, (discountCodesUsed) => discountCodesUsed.user)
+  discountCodesUsed: DiscountCodesUsed[];
+
+  @ManyToOne(() => Categories, (category) => category.users, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'category_id' })
+  category: Categories;
+
+  @OneToOne(() => Cart, (cart) => cart.user)
+  cart: Cart;
+}
