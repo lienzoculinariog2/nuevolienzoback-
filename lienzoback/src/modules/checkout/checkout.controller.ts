@@ -33,4 +33,11 @@ export class CheckoutController {
     await this.checkoutIntegrationService.processSuccessfulPayment(orderId);
     return { message: 'Pago procesado exitosamente' };
   }
+
+  @Get('diagnose/:userId')
+  @ApiOperation({ summary: 'Diagnosticar carrito del usuario (solo lectura)' })
+  @ApiResponse({ status: 200, description: 'Diagnóstico completado' })
+  async diagnoseCart(@Param('userId') userId: string) {
+    return this.checkoutService.diagnoseCart(userId);
+  }
 }

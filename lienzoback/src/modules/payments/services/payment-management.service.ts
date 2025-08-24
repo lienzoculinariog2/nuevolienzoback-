@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Payment, PaymentStatus, PaymentType, PaymentProvider } from '../entities/payment.entity';
 import { Orders, OrderStatus } from '../../orders/entities/order.entity';
 import { PaymentCalculationService } from './payment-calculation.service';
-import { PaymentsService } from '../payments.service';
 import Stripe from 'stripe';
 
 @Injectable()
