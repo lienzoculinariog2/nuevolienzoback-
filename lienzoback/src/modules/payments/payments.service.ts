@@ -25,7 +25,9 @@ export class PaymentsService {
     });
   }
 
-  async createPaymentIntent(createPaymentIntentDto: CreatePaymentIntentDto): Promise<PaymentResponseDto> {
+  async createPaymentIntent(
+    createPaymentIntentDto: CreatePaymentIntentDto,
+  ): Promise<PaymentResponseDto> {
     try {
       const { orderId, customerEmail, description, idempotencyKey } = createPaymentIntentDto;
 
@@ -33,14 +35,16 @@ export class PaymentsService {
       if (idempotencyKey) {
         const existingPayment = await this.checkIdempotency(idempotencyKey, orderId);
         if (existingPayment) {
-          this.logger.warn(`Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`);
+          this.logger.warn(
+            `Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`,
+          );
           throw new ConflictException('Payment already processed with this idempotency key');
         }
       }
 
       // 🛡️ SECURITY: Calculate amount server-side, don't trust client
       const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
-      
+
       // Validate that order is not already paid
       if (orderSummary.amount <= 0) {
         throw new BadRequestException('Order amount must be greater than 0');
@@ -69,7 +73,9 @@ export class PaymentsService {
       // 🛡️ SECURITY: Create payment record in our database
       await this.paymentManagementService.createPaymentRecord(orderId, paymentIntent);
 
-      this.logger.log(`Payment intent created: ${paymentIntent.id} for order: ${orderId} with amount: $${orderSummary.amount}`);
+      this.logger.log(
+        `Payment intent created: ${paymentIntent.id} for order: ${orderId} with amount: $${orderSummary.amount}`,
+      );
 
       return {
         clientSecret: paymentIntent.client_secret || '',
@@ -89,11 +95,11 @@ export class PaymentsService {
   async confirmPayment(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
     try {
       const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
-      
+
       if (paymentIntent.status === 'requires_confirmation') {
         return await this.stripe.paymentIntents.confirm(paymentIntentId);
       }
-      
+
       return paymentIntent;
     } catch (error) {
       this.logger.error(`Error confirming payment: ${error.message}`);
@@ -136,13 +142,13 @@ export class PaymentsService {
     }
   }
 
-  async handleWebhook(payload: Buffer, signature: string): Promise<Stripe.Event> {
+  handleWebhook(payload: Buffer, signature: string): Stripe.Event {
     try {
       const webhookSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
       const event = this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-      
+
       this.logger.log(`Webhook received: ${event.type}`);
-      
+
       return event;
     } catch (error) {
       this.logger.error(`Webhook signature verification failed: ${error.message}`);
@@ -155,7 +161,10 @@ export class PaymentsService {
    */
   private async checkIdempotency(idempotencyKey: string, orderId: string): Promise<boolean> {
     try {
-      const existingPayment = await this.paymentManagementService.checkIdempotency(idempotencyKey, orderId);
+      const existingPayment = await this.paymentManagementService.checkIdempotency(
+        idempotencyKey,
+        orderId,
+      );
       return !!existingPayment;
     } catch (error) {
       this.logger.error(`Error checking idempotency: ${error.message}`);

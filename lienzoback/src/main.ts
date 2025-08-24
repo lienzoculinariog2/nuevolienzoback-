@@ -10,9 +10,9 @@ async function bootstrap() {
   // Configuración de CORS basada en el entorno
   const isProduction = process.env.NODE_ENV === 'production';
   const config = isProduction ? corsConfig.production : corsConfig.development;
-  
+
   app.enableCors(config);
-  
+
   // Log de configuración de CORS para debugging
   console.log('🔧 CORS Configuration:');
   console.log('Environment:', process.env.NODE_ENV || 'development');

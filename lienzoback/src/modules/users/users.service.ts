@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Users, Roles, Diet } from './entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    private readonly notificationService: NotificationsService,
   ) {}
 
   async findAll(): Promise<Users[]> {
@@ -36,6 +38,7 @@ export class UsersService {
     newUser.isSuscribed = false;
 
     await this.userRepository.save(newUser);
+    await this.notificationService.sendRegistrationConfirmation(newUser);
     return newUser;
   }
 
