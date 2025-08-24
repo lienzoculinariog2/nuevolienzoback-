@@ -247,23 +247,48 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     try {
+      // 🛡️ Verificar que el raw body esté disponible
       if (!request.rawBody) {
-        throw new Error('No raw body available');
+        this.logger.error('Webhook error: No raw body available - Check body-parser configuration');
+        throw new Error('No raw body available - Check body-parser configuration');
       }
+
+      // 🛡️ Verificar que la firma esté presente
+      if (!signature) {
+        this.logger.error('Webhook error: No stripe-signature header');
+        throw new Error('No stripe-signature header');
+      }
+
+      this.logger.log(`Webhook received: ${request.rawBody.length} bytes, signature: ${signature.substring(0, 20)}...`);
 
       const event = await this.paymentsService.handleWebhook(request.rawBody, signature);
 
       // 🛡️ Use the new payment management service for all webhook events
       await this.handleWebhookEvent(event);
 
+      this.logger.log(`Webhook processed successfully: ${event.type}`);
       return { received: true };
     } catch (error) {
       this.logger.error(`Webhook error: ${error.message}`);
+      this.logger.error(`Webhook error details: ${JSON.stringify({
+        hasRawBody: !!request.rawBody,
+        rawBodyLength: request.rawBody?.length,
+        hasSignature: !!signature,
+        signatureLength: signature?.length,
+        errorType: error.constructor.name
+      })}`);
+      
       throw new HttpException(
         {
           status: HttpStatus.BAD_REQUEST,
           error: 'Webhook error',
           message: error.message,
+          details: {
+            hasRawBody: !!request.rawBody,
+            rawBodyLength: request.rawBody?.length,
+            hasSignature: !!signature,
+            signatureLength: signature?.length
+          }
         },
         HttpStatus.BAD_REQUEST,
       );
