@@ -34,16 +34,6 @@ async function bootstrap() {
   // Esto es necesario para que Stripe pueda verificar la firma del webhook
   app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
   
-  // 🔍 Endpoint de prueba para webhook
-  app.use('/payments/webhook', (req, res) => {
-    if (req.method === 'POST') {
-      console.log('🔍 Webhook endpoint accessed');
-      res.json({ message: 'Webhook endpoint working' });
-    } else {
-      res.status(404).json({ message: 'Method not allowed' });
-    }
-  });
-  
   app.useGlobalPipes(new ValidationPipe());
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
