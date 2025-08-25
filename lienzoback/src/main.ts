@@ -7,6 +7,10 @@ import { corsConfig } from './config/cors.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // 🌐 Configurar prefijo global para todas las rutas
+  app.setGlobalPrefix('api');
+  
   // Configuración de CORS basada en el entorno
   const isProduction = process.env.NODE_ENV === 'production';
   const config = isProduction ? corsConfig.production : corsConfig.development;
