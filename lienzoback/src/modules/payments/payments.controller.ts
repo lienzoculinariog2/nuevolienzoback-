@@ -247,36 +247,39 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     try {
-      // 🛡️ Verificar que el raw body esté disponible
+      // 🔍 DEBUGGING: Log información del request
+      this.logger.log('🔍 Webhook received:');
+      this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
+      this.logger.log(`Raw body exists: ${!!request.rawBody}`);
+      this.logger.log(`Raw body length: ${request.rawBody?.length || 0}`);
+      this.logger.log(`Signature: ${signature ? 'Present' : 'Missing'}`);
+
       if (!request.rawBody) {
-        this.logger.error('Webhook error: No raw body available - Check body-parser configuration');
+        this.logger.error('❌ No raw body available - Check body-parser configuration');
         throw new Error('No raw body available - Check body-parser configuration');
       }
 
-      // 🛡️ Verificar que la firma esté presente
       if (!signature) {
-        this.logger.error('Webhook error: No stripe-signature header');
+        this.logger.error('❌ No stripe-signature header');
         throw new Error('No stripe-signature header');
       }
 
-      this.logger.log(`Webhook received: ${request.rawBody.length} bytes, signature: ${signature.substring(0, 20)}...`);
-
       const event = await this.paymentsService.handleWebhook(request.rawBody, signature);
+      this.logger.log(`✅ Webhook verified successfully: ${event.type}`);
 
       // 🛡️ Use the new payment management service for all webhook events
       await this.handleWebhookEvent(event);
 
-      this.logger.log(`Webhook processed successfully: ${event.type}`);
+      this.logger.log('✅ Webhook processed successfully');
       return { received: true };
     } catch (error) {
-      this.logger.error(`Webhook error: ${error.message}`);
-      this.logger.error(`Webhook error details: ${JSON.stringify({
-        hasRawBody: !!request.rawBody,
-        rawBodyLength: request.rawBody?.length,
-        hasSignature: !!signature,
-        signatureLength: signature?.length,
-        errorType: error.constructor.name
-      })}`);
+      this.logger.error(`❌ Webhook error: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
+      
+      // 🔍 DEBUGGING: Log más información del error
+      if (error.message.includes('signature')) {
+        this.logger.error('🔍 Signature verification failed - Check webhook secret');
+      }
       
       throw new HttpException(
         {
@@ -285,9 +288,9 @@ export class PaymentsController {
           message: error.message,
           details: {
             hasRawBody: !!request.rawBody,
-            rawBodyLength: request.rawBody?.length,
+            rawBodyLength: request.rawBody?.length || 0,
             hasSignature: !!signature,
-            signatureLength: signature?.length
+            timestamp: new Date().toISOString()
           }
         },
         HttpStatus.BAD_REQUEST,

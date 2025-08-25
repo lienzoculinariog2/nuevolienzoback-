@@ -30,12 +30,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerDoc);
   SwaggerModule.setup('api', app, document);
 
-  app.useGlobalPipes(new ValidationPipe());
-  
-  // 🛡️ Configuración específica para webhooks de Stripe (DEBE ir ANTES de bodyParser.json)
+  // 🛡️ IMPORTANTE: Configurar body-parser para Stripe webhook ANTES de la configuración general
+  // Esto es necesario para que Stripe pueda verificar la firma del webhook
   app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
   
-  // Configuración general de body-parser (DESPUÉS del webhook)
+  app.useGlobalPipes(new ValidationPipe());
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
