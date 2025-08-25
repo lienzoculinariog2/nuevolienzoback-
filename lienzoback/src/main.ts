@@ -8,8 +8,8 @@ import { corsConfig } from './config/cors.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // 🌐 Configurar prefijo global para todas las rutas
-  app.setGlobalPrefix('api');
+  // 🌐 Configurar prefijo global para todas las rutas (temporalmente comentado para debug)
+  // app.setGlobalPrefix('api');
   
   // Configuración de CORS basada en el entorno
   const isProduction = process.env.NODE_ENV === 'production';
@@ -36,7 +36,7 @@ async function bootstrap() {
 
   // 🛡️ IMPORTANTE: Configurar body-parser para Stripe webhook ANTES de la configuración general
   // Esto es necesario para que Stripe pueda verificar la firma del webhook
-  app.use('/api/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+  app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
   
   app.useGlobalPipes(new ValidationPipe());
   app.use(bodyParser.json({ limit: '10mb' }));
