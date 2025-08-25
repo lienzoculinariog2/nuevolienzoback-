@@ -7,17 +7,26 @@ export class OrderDetail {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ name: 'orderId' })
+  orderId: string;
+
+  @Column({ name: 'productId' })
+  productId: string;
+
   @Column()
   quantity: number;
 
-  @Column({ name: 'unit_price', type: 'decimal', precision: 10, scale: 2 })
+  @Column({ name: 'unitPrice', type: 'decimal', precision: 10, scale: 2 })
   unitPrice: number;
 
+  @Column({ name: 'createdAt', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
   @ManyToOne(() => Products, (product) => product.orderDetails)
-  @JoinColumn({ name: 'product_id' })
+  @JoinColumn({ name: 'productId' })
   product: Products;
 
   @ManyToOne(() => Orders, (order) => order.orderDetails)
-  @JoinColumn({ name: 'order_id' })
+  @JoinColumn({ name: 'orderId' })
   order: Orders;
 }

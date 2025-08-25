@@ -17,7 +17,7 @@ import Stripe from 'stripe';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
 import { PaymentManagementService } from './services/payment-management.service';
-import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
+import { CreatePaymentIntentDto, CreatePaymentForOrderDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import { CreateRefundDto } from './dto/create-refund.dto';
 
@@ -60,7 +60,7 @@ export class PaymentsController {
 
   @Post('order/:orderId/create-payment')
   @ApiOperation({ summary: 'Create a payment intent for a specific order' })
-  @ApiBody({ type: CreatePaymentIntentDto })
+  @ApiBody({ type: CreatePaymentForOrderDto })
   @ApiResponse({
     status: 201,
     description: 'Payment intent created successfully for order',
@@ -70,10 +70,10 @@ export class PaymentsController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async createPaymentForOrder(
     @Param('orderId') orderId: string,
-    @Body() createPaymentIntentDto: CreatePaymentIntentDto,
+    @Body() createPaymentForOrderDto: CreatePaymentForOrderDto,
   ): Promise<PaymentResponseDto> {
     try {
-      return await this.paymentOrderService.createPaymentForOrder(orderId, createPaymentIntentDto);
+      return await this.paymentOrderService.createPaymentForOrder(orderId, createPaymentForOrderDto);
     } catch (error) {
       this.logger.error(`Error creating payment for order ${orderId}: ${error.message}`);
       throw new HttpException(
@@ -252,11 +252,15 @@ export class PaymentsController {
       this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
       this.logger.log(`Raw body exists: ${!!request.rawBody}`);
       this.logger.log(`Raw body length: ${request.rawBody?.length || 0}`);
+      this.logger.log(`Body exists: ${!!request.body}`);
       this.logger.log(`Signature: ${signature ? 'Present' : 'Missing'}`);
 
-      if (!request.rawBody) {
-        this.logger.error('❌ No raw body available - Check body-parser configuration');
-        throw new Error('No raw body available - Check body-parser configuration');
+      // 🛡️ Use request.body as fallback if rawBody is not available
+      const payload = request.rawBody || Buffer.from(JSON.stringify(request.body));
+
+      if (!payload) {
+        this.logger.error('❌ No payload available');
+        throw new Error('No payload available');
       }
 
       if (!signature) {
@@ -264,7 +268,7 @@ export class PaymentsController {
         throw new Error('No stripe-signature header');
       }
 
-      const event = await this.paymentsService.handleWebhook(request.rawBody, signature);
+      const event = await this.paymentsService.handleWebhook(payload, signature);
       this.logger.log(`✅ Webhook verified successfully: ${event.type}`);
 
       // 🛡️ Use the new payment management service for all webhook events
@@ -289,6 +293,7 @@ export class PaymentsController {
           details: {
             hasRawBody: !!request.rawBody,
             rawBodyLength: request.rawBody?.length || 0,
+            hasBody: !!request.body,
             hasSignature: !!signature,
             timestamp: new Date().toISOString()
           }
@@ -322,7 +327,16 @@ export class PaymentsController {
     try {
       await this.paymentManagementService.updatePaymentStatus(paymentIntent.id, event);
     } catch (error) {
+      // 🛡️ Handle case where payment doesn't exist in database (common with test events)
+      if (error.message.includes('not found')) {
+        this.logger.warn(`⚠️ Payment intent ${paymentIntent.id} not found in database. This is normal for test events.`);
+        this.logger.log(`📝 Event type: ${event.type}, Amount: ${paymentIntent.amount}, Currency: ${paymentIntent.currency}`);
+        return; // Don't throw error, just log and continue
+      }
+      
+      // 🚨 Log other errors
       this.logger.error(`Error processing payment intent event: ${error.message}`);
+      throw error; // Re-throw other errors
     }
   }
 

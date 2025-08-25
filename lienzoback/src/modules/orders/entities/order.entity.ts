@@ -19,35 +19,38 @@ export class Orders {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'date' })
-  date: Date;
+  @Column({ name: 'userId' })
+  userId: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  total: number;
-
-  @Column({ name: 'discount_id', type: 'int', nullable: true })
-  discountId: number;
+  @Column({ name: 'totalAmount', type: 'decimal', precision: 10, scale: 2 })
+  totalAmount: number;
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
-  statusOrder: OrderStatus;
+  status: OrderStatus;
 
-  @Column({ name: 'is_paid', default: false })
-  isPaid: boolean;
+  @Column({ name: 'shippingAddress', type: 'jsonb', nullable: true })
+  shippingAddress: any;
 
-  @Column({ name: 'stripe_payment_intent_id', nullable: true })
-  stripePaymentIntentId: string;
+  @Column({ name: 'billingAddress', type: 'jsonb', nullable: true })
+  billingAddress: any;
 
-  @Column({ name: 'stripe_charge_id', nullable: true })
-  stripeChargeId: string;
+  @Column({ name: 'discountCodeId', type: 'uuid', nullable: true })
+  discountCodeId: string;
 
-  @Column({ name: 'payment_status', nullable: true })
-  paymentStatus: string;
+  @Column({ name: 'discountAmount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  discountAmount: number;
 
-  @Column({ name: 'shipping_address', nullable: true })
-  shippingAddress: string;
+  @Column({ type: 'text', nullable: true })
+  notes: string;
+
+  @Column({ name: 'createdAt', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
+  @Column({ name: 'updatedAt', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  updatedAt: Date;
 
   @ManyToOne(() => Users, (user) => user.orders)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: Users;
 
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.order)

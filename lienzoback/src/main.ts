@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import { corsConfig } from './config/cors.config';
+import * as express from 'express';
 
 async function bootstrap() {
   console.log('🚀 Iniciando aplicación...');
@@ -36,14 +37,24 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerDoc);
   SwaggerModule.setup('docs', app, document);
 
-  // 🛡️ IMPORTANTE: Configurar body-parser para Stripe webhook ANTES de la configuración general
-  // Esto es necesario para que Stripe pueda verificar la firma del webhook
-  app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+  // 🛡️ IMPORTANTE: Configurar middleware específico para Stripe webhook
+  app.use('/payments/webhook', (req, res, next) => {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      req.rawBody = Buffer.from(data);
+      next();
+    });
+  });
 
   app.useGlobalPipes(new ValidationPipe());
+
+  // Configuración general de body-parser para otras rutas
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
-
 
   console.log('🌐 Configurando servidor...');
   await app.listen(process.env.PORT ?? 3001);
