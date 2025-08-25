@@ -6,10 +6,12 @@ import * as bodyParser from 'body-parser';
 import { corsConfig } from './config/cors.config';
 
 async function bootstrap() {
+  console.log('🚀 Iniciando aplicación...');
   const app = await NestFactory.create(AppModule);
+  console.log('✅ Aplicación creada exitosamente');
   
-  // 🌐 Configurar prefijo global para todas las rutas (temporalmente comentado para debug)
-  // app.setGlobalPrefix('api');
+  // 🌐 Configurar prefijo global para todas las rutas
+  app.setGlobalPrefix('api');
   
   // Configuración de CORS basada en el entorno
   const isProduction = process.env.NODE_ENV === 'production';
@@ -36,13 +38,16 @@ async function bootstrap() {
 
   // 🛡️ IMPORTANTE: Configurar body-parser para Stripe webhook ANTES de la configuración general
   // Esto es necesario para que Stripe pueda verificar la firma del webhook
-  app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+  app.use('/api/payments/webhook', bodyParser.raw({ type: 'application/json' }));
   
   app.useGlobalPipes(new ValidationPipe());
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
+  console.log('🌐 Configurando servidor...');
   await app.listen(process.env.PORT ?? 3001);
+  console.log(`✅ Servidor iniciado en puerto ${process.env.PORT ?? 3001}`);
+  console.log('🎯 Aplicación lista para recibir peticiones');
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
