@@ -14,7 +14,7 @@ import { Ingredients } from '../ingredients/entities/ingredient.entity';
 import { IngredientsService } from '../ingredients/ingredients.service';
 import { PaginatedResponse } from './dto/paginated-response.interface';
 import { v2 as cloudinary } from 'cloudinary';
-import { config as dotenvconfig } from 'dotenv';
+
 
 @Injectable()
 export class ProductsService {
@@ -331,7 +331,7 @@ export class ProductsService {
       where: {
         product: { id },
         order: {
-          statusOrder: Not(In([OrderStatus.CANCELED, OrderStatus.DELIVERED])),
+          status: Not(In([OrderStatus.CANCELED, OrderStatus.DELIVERED])),
         },
       },
     });

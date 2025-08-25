@@ -27,13 +27,14 @@ export class CheckoutController {
     return this.checkoutIntegrationService.processCompleteCheckout(userId, checkoutDto);
   }
 
-  @Post('payment-success/:orderId')
-  @ApiOperation({ summary: 'Procesar pago exitoso (actualizar stock, vaciar carrito)' })
-  @ApiResponse({ status: 200, description: 'Pago procesado exitosamente' })
-  async processSuccessfulPayment(@Param('orderId') orderId: string) {
-    await this.checkoutIntegrationService.processSuccessfulPayment(orderId);
-    return { message: 'Pago procesado exitosamente' };
-  }
+  // 🚫 DESHABILITADO: Procesar pago exitoso (ahora se maneja via webhook)
+  // @Post('payment-success/:orderId')
+  // @ApiOperation({ summary: 'Procesar pago exitoso (actualizar stock, vaciar carrito)' })
+  // @ApiResponse({ status: 200, description: 'Pago procesado exitosamente' })
+  // async processSuccessfulPayment(@Param('orderId') orderId: string) {
+  //   await this.checkoutIntegrationService.processSuccessfulPayment(orderId);
+  //   return { message: 'Pago procesado exitosamente' };
+  // }
 
   // 🚫 DESHABILITADO: Diagnóstico de carrito (solo para debugging)
   // @Get('diagnose/:userId')

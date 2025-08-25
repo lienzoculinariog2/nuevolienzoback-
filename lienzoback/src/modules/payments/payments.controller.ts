@@ -87,22 +87,22 @@ export class PaymentsController {
     }
   }
 
-  @Get('order/:orderId/payment-status')
-  @ApiOperation({ summary: 'Get payment status for a specific order' })
+  @Get('order-status/:orderId')
+  @ApiOperation({ summary: 'Get payment status for an order' })
   @ApiResponse({ status: 200, description: 'Payment status retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
   async getOrderPaymentStatus(@Param('orderId') orderId: string) {
     try {
-      return await this.paymentOrderService.getOrderPaymentStatus(orderId);
+      const paymentStatus = await this.paymentOrderService.getOrderPaymentStatus(orderId);
+      return paymentStatus;
     } catch (error) {
       this.logger.error(`Error getting payment status for order ${orderId}: ${error.message}`);
       throw new HttpException(
         {
-          status: HttpStatus.NOT_FOUND,
+          status: HttpStatus.BAD_REQUEST,
           error: 'Error getting payment status',
           message: error.message,
         },
-        HttpStatus.NOT_FOUND,
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -325,7 +325,24 @@ export class PaymentsController {
     this.logger.log(`Processing payment intent event: ${event.type} for ${paymentIntent.id}`);
     
     try {
-      await this.paymentManagementService.updatePaymentStatus(paymentIntent.id, event);
+      // Handle specific event types using PaymentOrderService directly
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          await this.paymentOrderService.handlePaymentSuccess(paymentIntent.id);
+          break;
+        case 'payment_intent.payment_failed':
+          await this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
+          break;
+        case 'payment_intent.canceled':
+          // Handle canceled payment
+          this.logger.log(`Payment intent ${paymentIntent.id} was canceled`);
+          break;
+        case 'payment_intent.processing':
+        case 'payment_intent.requires_action':
+          // Log processing states
+          this.logger.log(`Payment intent ${paymentIntent.id} is ${event.type}`);
+          break;
+      }
     } catch (error) {
       // 🛡️ Handle case where payment doesn't exist in database (common with test events)
       if (error.message.includes('not found')) {

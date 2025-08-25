@@ -11,11 +11,13 @@ import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { Products } from '../products/entities/product.entity';
 import { Payment } from './entities/payment.entity';
 import { ConfigModule } from '@nestjs/config';
+import { CartModule } from '../cart/cart.module';
 
 @Module({
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
+    CartModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],

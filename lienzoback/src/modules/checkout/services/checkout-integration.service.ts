@@ -42,7 +42,7 @@ export class CheckoutIntegrationService {
   ) {}
 
   /**
-   * Flujo completo de checkout: validación → creación de orden → payment intent → actualización de stock
+   * Flujo completo de checkout: validación → creación de orden → payment intent
    */
   async processCompleteCheckout(
     userId: string,
@@ -103,47 +103,6 @@ export class CheckoutIntegrationService {
 
     } catch (error) {
       this.logger.error(`Error en checkout completo: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Procesar pago exitoso: actualizar stock, marcar descuento como usado, vaciar carrito
-   */
-  async processSuccessfulPayment(orderId: string): Promise<void> {
-    this.logger.log(`Procesando pago exitoso para orden: ${orderId}`);
-
-    try {
-      // 1. Obtener la orden con todos los detalles
-      const order = await this.ordersRepository.findOne({
-        where: { id: orderId },
-        relations: ['orderDetails', 'orderDetails.product', 'user', 'discountCodesUsed', 'discountCodesUsed.discountCode'],
-      });
-
-      if (!order) {
-        throw new NotFoundException(`Orden ${orderId} no encontrada`);
-      }
-
-      // 2. Actualizar stock de productos
-      await this.updateProductStock(order.orderDetails);
-
-      // 3. Marcar código de descuento como usado si existe
-      if (order.discountCodesUsed && order.discountCodesUsed.length > 0) {
-        await this.markDiscountCodeAsUsed(order.discountCodesUsed[0]);
-      }
-
-      // 4. Vaciar el carrito del usuario
-      await this.clearUserCart(order.user.id);
-
-      // 5. Actualizar estado de la orden
-      order.statusOrder = OrderStatus.PAID;
-      order.isPaid = true;
-      await this.ordersRepository.save(order);
-
-      this.logger.log(`Pago procesado exitosamente para orden: ${orderId}`);
-
-    } catch (error) {
-      this.logger.error(`Error procesando pago exitoso: ${error.message}`);
       throw error;
     }
   }
@@ -249,10 +208,8 @@ export class CheckoutIntegrationService {
     // Crear la orden
     const order = this.ordersRepository.create({
       user: { id: userId },
-      date: new Date(),
-      total: finalTotal,
-      statusOrder: OrderStatus.PENDING,
-      isPaid: false,
+      totalAmount: finalTotal,
+      status: OrderStatus.PENDING,
       shippingAddress,
     });
 
@@ -282,49 +239,5 @@ export class CheckoutIntegrationService {
     }
 
     return savedOrder;
-  }
-
-  /**
-   * Actualizar stock de productos
-   */
-  private async updateProductStock(orderDetails: OrderDetail[]): Promise<void> {
-    for (const detail of orderDetails) {
-      const product = await this.productsRepository.findOneBy({ id: detail.product.id });
-      if (product) {
-        product.stock -= detail.quantity;
-        await this.productsRepository.save(product);
-      }
-    }
-  }
-
-  /**
-   * Marcar código de descuento como usado
-   */
-  private async markDiscountCodeAsUsed(discountCodeUsed: DiscountCodesUsed): Promise<void> {
-    discountCodeUsed.usedAt = new Date();
-    await this.discountCodesUsedRepository.save(discountCodeUsed);
-  }
-
-  /**
-   * Vaciar el carrito del usuario completamente
-   */
-  private async clearUserCart(userId: string): Promise<void> {
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['items'],
-    });
-
-    if (cart && cart.items && cart.items.length > 0) {
-      // Eliminar todos los items del carrito
-      await this.cartItemRepository.remove(cart.items);
-      
-      // Marcar el carrito como inactivo
-      cart.isActive = false;
-      await this.cartRepository.save(cart);
-      
-      this.logger.log(`Carrito vaciado exitosamente para usuario: ${userId}`);
-    } else {
-      this.logger.log(`No se encontró carrito para vaciar para usuario: ${userId}`);
-    }
   }
 }
