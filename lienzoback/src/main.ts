@@ -38,6 +38,29 @@ async function bootstrap() {
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
+  // 🔍 Endpoint de health para diagnóstico usando Express directamente
+  app.use('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || 3001
+    });
+  });
+
+  // 🔍 Endpoint raíz para verificar que el servidor está funcionando
+  app.use('/', (req, res) => {
+    if (req.method === 'GET' && req.path === '/') {
+      res.json({
+        message: 'Lienzo Culinario API',
+        status: 'running',
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      });
+    } else {
+      res.status(404).json({ message: 'Not Found' });
+    }
+  });
 
   await app.listen(process.env.PORT ?? 3001);
 }
