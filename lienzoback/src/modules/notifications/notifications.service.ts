@@ -19,27 +19,37 @@ export class NotificationsService {
   ) {}
 
   async sendRegistrationConfirmation(user: Users) {
-    await this.mailerService.sendMail({
-      to: user.email,
-      subject: `¡Bienvenido a Lienzo Culinario, ${user.name}! 🎉`,
-      template: 'signUp-confirmation',
-      context: {
-        name: user.name,
-      },
-    });
-    this.logger.log(`Registration confirmation email sent to ${user.email}`);
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: `¡Bienvenido a Lienzo Culinario, ${user.name}! 🎉`,
+        template: 'signUp-confirmation',
+        context: {
+          name: user.name,
+        },
+      });
+      this.logger.log(`Registration confirmation email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Error sending registration email to ${user.email}:`, error.message);
+      // No lanzar el error para no afectar el registro del usuario
+    }
   }
 
   async sendPurchaseConfirmation(order: Orders) {
-    await this.mailerService.sendMail({
-      to: order.user.email,
-      subject: `Confirmación de compra #${order.id}`,
-      template: 'purchase-confirmation',
-      context: {
-        order,
-      },
-    });
-    this.logger.log(`Purchase confirmation email sent to ${order.user.email}`);
+    try {
+      await this.mailerService.sendMail({
+        to: order.user.email,
+        subject: `Confirmación de compra #${order.id}`,
+        template: 'purchase-confirmation',
+        context: {
+          order,
+        },
+      });
+      this.logger.log(`Purchase confirmation email sent to ${order.user.email}`);
+    } catch (error) {
+      this.logger.error(`Error sending purchase confirmation email to ${order.user.email}:`, error.message);
+      // No lanzar el error para no afectar el proceso de compra
+    }
   }
 
   @Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
@@ -54,15 +64,20 @@ export class NotificationsService {
         where: { isSuscribed: true },
       });
       for (const user of subscribedUsers) {
-        await this.mailerService.sendMail({
-          to: user.email,
-          subject: 'Obras culinarias de la semana 🧑‍🍳',
-          template: 'weekly-newsletter',
-          context: {
-            name: user.name,
-            products: products,
-          },
-        });
+        try {
+          await this.mailerService.sendMail({
+            to: user.email,
+            subject: 'Obras culinarias de la semana 🧑‍🍳',
+            template: 'weekly-newsletter',
+            context: {
+              name: user.name,
+              products: products,
+            },
+          });
+        } catch (error) {
+          this.logger.error(`Error sending newsletter to ${user.email}:`, error.message);
+          // Continuar con el siguiente usuario
+        }
       }
       this.logger.log(`Newsletters sent to ${users.length} users.`);
     } catch (error) {
