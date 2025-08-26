@@ -113,8 +113,10 @@ export class PaymentOrderService {
         await this.cartService.clearCart(payment.order.userId);
         this.logger.log(`✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`);
       } catch (cartError) {
-        this.logger.warn(`⚠️ Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
-        // Don't throw error here as the payment was successful
+        this.logger.error(`❌ ERROR CRÍTICO: Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
+        this.logger.error(`❌ Error stack: ${cartError.stack}`);
+        // Don't throw error here as the payment was successful, but log it as error
+        // TODO: Implement retry mechanism or manual cart clearing
       }
 
       this.logger.log(`✅ ===== PAGO EXITOSO COMPLETADO =====`);
@@ -202,55 +204,67 @@ export class PaymentOrderService {
    */
   private async updateProductStock(orderId: string): Promise<void> {
     try {
-      console.log('📦 ===== ACTUALIZANDO STOCK DE PRODUCTOS =====');
-      console.log(`📋 Order ID: ${orderId}`);
+      this.logger.log('📦 ===== ACTUALIZANDO STOCK DE PRODUCTOS =====');
+      this.logger.log(`📋 Order ID: ${orderId}`);
 
       // Get order details with products
-      console.log('🔍 Obteniendo detalles de la orden...');
+      this.logger.log('🔍 Obteniendo detalles de la orden...');
       const orderDetails = await this.orderDetailRepository.find({
         where: { order: { id: orderId } },
         relations: ['product'],
       });
 
-      console.log(`📦 Encontrados ${orderDetails.length} items en la orden`);
+      this.logger.log(`📦 Encontrados ${orderDetails.length} items en la orden`);
 
-      for (const detail of orderDetails) {
-        console.log(`🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`);
-        
-        if (detail.product) {
-          const product = await this.productsRepository.findOneBy({ id: detail.product.id });
-          if (product) {
-            console.log(`📦 Producto: ${product.name}`);
-            console.log(`📊 Stock actual: ${product.stock}`);
-            console.log(`📉 Cantidad a descontar: ${detail.quantity}`);
-            
-            // Decrease stock
-            const newStock = product.stock - detail.quantity;
-            product.stock = newStock;
-            
-            console.log(`📊 Nuevo stock: ${newStock}`);
-            
-            // Deactivate product if stock reaches 0
-            if (product.stock <= 0) {
-              product.isActive = false;
-              console.log(`⚠️ Producto ${product.name} desactivado por stock agotado`);
-            }
-            
-            await this.productsRepository.save(product);
-            console.log(`✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`);
-          } else {
-            console.log(`⚠️ Producto con ID ${detail.product.id} no encontrado`);
-          }
-        } else {
-          console.log(`⚠️ Item sin producto asociado`);
-        }
+      if (orderDetails.length === 0) {
+        this.logger.warn(`⚠️ ADVERTENCIA: No se encontraron order details para la orden ${orderId}`);
+        return;
       }
 
-      console.log('✅ ===== STOCK DE PRODUCTOS ACTUALIZADO EXITOSAMENTE =====');
+      for (const detail of orderDetails) {
+        this.logger.log(`🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`);
+        
+        if (!detail.product) {
+          this.logger.error(`❌ ERROR: Item sin producto asociado en order detail ${detail.id}`);
+          continue;
+        }
+
+        const product = await this.productsRepository.findOneBy({ id: detail.product.id });
+        if (!product) {
+          this.logger.error(`❌ ERROR: Producto con ID ${detail.product.id} no encontrado`);
+          continue;
+        }
+
+        this.logger.log(`📦 Producto: ${product.name}`);
+        this.logger.log(`📊 Stock actual: ${product.stock}`);
+        this.logger.log(`📉 Cantidad a descontar: ${detail.quantity}`);
+        
+        // Validate stock before decreasing
+        if (product.stock < detail.quantity) {
+          this.logger.error(`❌ ERROR: Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`);
+          continue;
+        }
+        
+        // Decrease stock
+        const newStock = product.stock - detail.quantity;
+        product.stock = newStock;
+        
+        this.logger.log(`📊 Nuevo stock: ${newStock}`);
+        
+        // Deactivate product if stock reaches 0
+        if (product.stock <= 0) {
+          product.isActive = false;
+          this.logger.log(`⚠️ Producto ${product.name} desactivado por stock agotado`);
+        }
+        
+        await this.productsRepository.save(product);
+        this.logger.log(`✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`);
+      }
+
+      this.logger.log('✅ ===== STOCK DE PRODUCTOS ACTUALIZADO EXITOSAMENTE =====');
     } catch (error) {
-      console.log(`❌ ERROR en updateProductStock: ${error.message}`);
-      console.log(`❌ Error stack: ${error.stack}`);
-      this.logger.error(`Error updating product stock for order ${orderId}: ${error.message}`);
+      this.logger.error(`❌ ERROR en updateProductStock: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
       throw error;
     }
   }
