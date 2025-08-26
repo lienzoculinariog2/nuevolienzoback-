@@ -64,7 +64,8 @@ El `package.json` ya está configurado correctamente:
 {
   "scripts": {
     "build": "nest build",
-    "start:prod": "npm run build && node dist/main"
+    "start": "npm run build && npm run copy:templates && node dist/src/main",
+    "start:prod": "npm run build && npm run copy:templates && node dist/src/main"
   }
 }
 ```
