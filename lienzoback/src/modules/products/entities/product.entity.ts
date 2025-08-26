@@ -64,7 +64,7 @@ export class Products {
   ingredients: Ingredients[];
 
   @ManyToOne(() => Categories, (category) => category.product)
-  @JoinColumn({ name: 'categoryId' })
+  @JoinColumn({ name: 'category_id' })
   category: Categories;
   secure_url: string | undefined;
 

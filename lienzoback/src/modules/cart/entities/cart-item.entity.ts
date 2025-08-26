@@ -7,10 +7,10 @@ export class CartItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'cartId', type: 'uuid' })
+  @Column({ name: 'cart_id', type: 'uuid' })
   cartId: string;
 
-  @Column({ name: 'productId', type: 'uuid' })
+  @Column({ name: 'product_id', type: 'uuid' })
   productId: string;
 
   @Column({ name: 'quantity', default: 1 })
@@ -26,10 +26,10 @@ export class CartItem {
   updatedAt: Date;
 
   @ManyToOne(() => Cart, (cart) => cart.items)
-  @JoinColumn({ name: 'cartId' })
+  @JoinColumn({ name: 'cart_id' })
   cart: Cart;
 
   @ManyToOne(() => Products, (product) => product.cartItems)
-  @JoinColumn({ name: 'productId' })
+  @JoinColumn({ name: 'product_id' })
   product: Products;
 }

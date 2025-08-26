@@ -168,7 +168,7 @@ export class OrdersService {
       where: { user: { id: userId } },
       relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
       order: {
-        createdAt: 'DESC',
+        id: 'DESC',
       },
     });
   }

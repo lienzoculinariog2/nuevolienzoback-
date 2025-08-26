@@ -88,11 +88,9 @@ export class PaymentCalculationService {
 
     // Calculate discount (if any)
     let discount = 0;
-    if (order.discountCodeId) {
-      // TODO: Implement discount calculation based on discount codes
-      // For now, we'll use a placeholder
-      discount = 0;
-    }
+    // TODO: Implement discount calculation based on discount codes
+    // For now, we'll use a placeholder
+    discount = 0;
 
     const total = subtotal - discount;
 

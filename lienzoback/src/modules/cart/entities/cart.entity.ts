@@ -2,12 +2,12 @@ import { Entity, PrimaryGeneratedColumn, OneToOne, OneToMany, Column, JoinColumn
 import { Users } from '../../users/entities/user.entity';
 import { CartItem } from './cart-item.entity';
 
-@Entity({ name: 'cart' })
+@Entity({ name: 'carts' })
 export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'userId', type: 'varchar' })
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @Column({ name: 'isActive', default: true })
@@ -20,7 +20,7 @@ export class Cart {
   updatedAt: Date;
 
   @OneToOne(() => Users)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: Users;
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart, { cascade: true })

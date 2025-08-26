@@ -18,38 +18,35 @@ export class Orders {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'userId' })
+  @Column({ name: 'date', type: 'date', default: () => 'CURRENT_DATE' })
+  date: Date = new Date();
+
+  @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'totalAmount', type: 'decimal', precision: 10, scale: 2 })
+  @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+  @Column({ name: 'statusOrder', type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
-  @Column({ name: 'shippingAddress', type: 'jsonb', nullable: true })
+  @Column({ name: 'shipping_address', type: 'character varying', nullable: true })
   shippingAddress: any;
 
-  @Column({ name: 'billingAddress', type: 'jsonb', nullable: true })
-  billingAddress: any;
+  @Column({ name: 'is_paid', type: 'boolean', default: false })
+  isPaid: boolean;
 
-  @Column({ name: 'discountCodeId', type: 'uuid', nullable: true })
-  discountCodeId: string;
+  @Column({ name: 'stripe_payment_intent_id', type: 'character varying', nullable: true })
+  stripePaymentIntentId: string;
 
-  @Column({ name: 'discountAmount', type: 'decimal', precision: 10, scale: 2, default: 0 })
-  discountAmount: number;
+  @Column({ name: 'stripe_charge_id', type: 'character varying', nullable: true })
+  stripeChargeId: string;
 
-  @Column({ type: 'text', nullable: true })
-  notes: string;
-
-  @Column({ name: 'createdAt', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
-
-  @Column({ name: 'updatedAt', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  updatedAt: Date;
+  @Column({ name: 'payment_status', type: 'character varying', nullable: true })
+  paymentStatus: string;
 
   @ManyToOne(() => Users, (user) => user.orders)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: Users;
 
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.order)

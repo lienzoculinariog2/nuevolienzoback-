@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity';
 import { CartItem } from '../../cart/entities/cart-item.entity';
 import { Users } from '../../users/entities/user.entity';
@@ -39,6 +39,7 @@ export class CheckoutIntegrationService {
     private readonly cartService: CartService,
     private readonly discountCodesService: DiscountCodesService,
     private readonly paymentsService: PaymentsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -84,7 +85,10 @@ export class CheckoutIntegrationService {
       // 5. Crear la orden
       const order = await this.createOrder(userId, orderItems, subTotal, finalTotal, checkoutDto.shippingAddress, discountCode);
 
-      // 6. Crear payment intent
+      // 6. Limpiar carrito después de crear la orden
+      await this.clearCart(cart.id);
+
+      // 7. Crear payment intent
       const paymentIntentDto: CreatePaymentIntentDto = {
         orderId: order.id,
         customerEmail: user.email,
@@ -205,39 +209,69 @@ export class CheckoutIntegrationService {
     shippingAddress: string,
     discountCode?: DiscountCodes,
   ): Promise<Orders> {
-    // Crear la orden
-    const order = this.ordersRepository.create({
-      user: { id: userId },
-      totalAmount: finalTotal,
-      status: OrderStatus.PENDING,
-      shippingAddress,
-    });
-
-    const savedOrder = await this.ordersRepository.save(order);
-
-    // Crear detalles de la orden
-    const orderDetails = orderItems.map(item => 
-      this.orderDetailRepository.create({
-        order: savedOrder,
-        product: { id: item.productId },
-        quantity: item.quantity,
-        unitPrice: item.price,
-      })
-    );
-
-    await this.orderDetailRepository.save(orderDetails);
-
-    // Marcar código de descuento como usado si existe
-    if (discountCode) {
-      const discountUsed = this.discountCodesUsedRepository.create({
-        discountCode: { id: discountCode.id },
+    return this.dataSource.transaction(async (manager) => {
+      // Crear la orden
+      const order = this.ordersRepository.create({
         user: { id: userId },
-        order: savedOrder,
-        usedAt: new Date(),
+        totalAmount: finalTotal,
+        status: OrderStatus.PENDING,
+        shippingAddress,
+        date: new Date(),
       });
-      await this.discountCodesUsedRepository.save(discountUsed);
-    }
 
-    return savedOrder;
+      const savedOrder = await manager.save(Orders, order);
+
+      // Crear detalles de la orden
+      const orderDetails = orderItems.map(item => 
+        this.orderDetailRepository.create({
+          order: savedOrder,
+          product: { id: item.productId },
+          quantity: item.quantity,
+          unitPrice: item.price,
+        })
+      );
+
+      await manager.save(OrderDetail, orderDetails);
+
+      // Descontar stock de productos
+      for (const item of orderItems) {
+        const product = await manager.findOne(Products, { where: { id: item.productId } });
+        if (product) {
+          product.stock -= item.quantity;
+          await manager.save(Products, product);
+        }
+      }
+
+      // Marcar código de descuento como usado si existe
+      if (discountCode) {
+        const discountUsed = this.discountCodesUsedRepository.create({
+          discountCode: { id: discountCode.id },
+          user: { id: userId },
+          order: savedOrder,
+          usedAt: new Date(),
+        });
+        await manager.save(DiscountCodesUsed, discountUsed);
+      }
+
+      return savedOrder;
+    });
+  }
+
+  /**
+   * Limpiar carrito después del checkout
+   */
+  private async clearCart(cartId: string): Promise<void> {
+    try {
+      // Eliminar todos los items del carrito
+      await this.cartItemRepository.delete({ cart: { id: cartId } });
+      
+      // Desactivar el carrito
+      await this.cartRepository.update(cartId, { isActive: false });
+      
+      this.logger.log(`Carrito ${cartId} limpiado exitosamente`);
+    } catch (error) {
+      this.logger.error(`Error limpiando carrito ${cartId}: ${error.message}`);
+      // No lanzamos el error para no afectar el checkout
+    }
   }
 }
