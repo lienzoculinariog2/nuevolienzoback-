@@ -331,7 +331,7 @@ export class ProductsService {
       where: {
         product: { id },
         order: {
-          status: Not(In([OrderStatus.CANCELED, OrderStatus.DELIVERED])),
+          status: Not(In([OrderStatus.CANCELLED, OrderStatus.COMPLETED])),
         },
       },
     });

@@ -7,11 +7,10 @@ import { Payment } from 'src/modules/payments/entities/payment.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
-  PAID = 'paid',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELED = 'canceled',
-  PAYMENT_FAILED = 'payment_failed',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  FAILED = 'failed',
 }
 
 @Entity({ name: 'orders' })

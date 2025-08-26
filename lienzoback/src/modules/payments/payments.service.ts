@@ -29,27 +29,40 @@ export class PaymentsService {
     createPaymentIntentDto: CreatePaymentIntentDto,
   ): Promise<PaymentResponseDto> {
     try {
+      console.log('💳 ===== CREANDO PAYMENT INTENT =====');
+      console.log(`📋 Order ID: ${createPaymentIntentDto.orderId}`);
+      console.log(`👤 Customer Email: ${createPaymentIntentDto.customerEmail}`);
+      console.log(`📝 Description: ${createPaymentIntentDto.description}`);
+      console.log(`🔑 Idempotency Key: ${createPaymentIntentDto.idempotencyKey}`);
+
       const { orderId, customerEmail, description, idempotencyKey } = createPaymentIntentDto;
 
       // 🛡️ SECURITY: Check idempotency to prevent duplicate payments
       if (idempotencyKey) {
+        console.log('🔍 Verificando idempotencia...');
         const existingPayment = await this.checkIdempotency(idempotencyKey, orderId);
         if (existingPayment) {
+          console.log(`⚠️ Pago duplicado detectado para orden ${orderId} con key ${idempotencyKey}`);
           this.logger.warn(
             `Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`,
           );
           throw new ConflictException('Payment already processed with this idempotency key');
         }
+        console.log('✅ Idempotencia verificada - no hay pagos duplicados');
       }
 
       // 🛡️ SECURITY: Calculate amount server-side, don't trust client
+      console.log('💰 Calculando resumen de la orden...');
       const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
+      console.log(`📊 Order Summary: Amount: $${orderSummary.amount}, Currency: ${orderSummary.currency}`);
 
       // Validate that order is not already paid
       if (orderSummary.amount <= 0) {
+        console.log(`❌ ERROR: Order amount must be greater than 0`);
         throw new BadRequestException('Order amount must be greater than 0');
       }
 
+      console.log('🔄 Preparando parámetros para Stripe...');
       const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
         amount: Math.round(orderSummary.amount * 100), // Convert dollars to cents for Stripe
         currency: orderSummary.currency,
@@ -64,20 +77,29 @@ export class PaymentsService {
       // Add customer email if provided
       if (customerEmail) {
         paymentIntentParams.receipt_email = customerEmail;
+        console.log(`📧 Receipt email configurado: ${customerEmail}`);
       } else if (orderSummary.customerEmail) {
         paymentIntentParams.receipt_email = orderSummary.customerEmail;
+        console.log(`📧 Receipt email configurado: ${orderSummary.customerEmail}`);
       }
 
+      console.log('🚀 Creando Payment Intent en Stripe...');
       const paymentIntent = await this.stripe.paymentIntents.create(paymentIntentParams);
+      console.log(`✅ Payment Intent creado en Stripe: ${paymentIntent.id}`);
+      console.log(`💰 Amount: ${paymentIntent.amount} cents ($${paymentIntent.amount / 100})`);
+      console.log(`💱 Currency: ${paymentIntent.currency}`);
+      console.log(`📊 Status: ${paymentIntent.status}`);
 
       // 🛡️ SECURITY: Create payment record in our database
+      console.log('💾 Creando registro de pago en la base de datos...');
       await this.paymentManagementService.createPaymentRecord(orderId, paymentIntent);
+      console.log('✅ Registro de pago creado en la base de datos');
 
       this.logger.log(
         `Payment intent created: ${paymentIntent.id} for order: ${orderId} with amount: $${orderSummary.amount}`,
       );
 
-      return {
+      const response = {
         clientSecret: paymentIntent.client_secret || '',
         paymentIntentId: paymentIntent.id,
         amount: paymentIntent.amount / 100, // Convert cents back to dollars
@@ -86,7 +108,17 @@ export class PaymentsService {
         orderId,
         description: paymentIntent.description || orderSummary.description,
       };
+
+      console.log('✅ ===== PAYMENT INTENT CREADO EXITOSAMENTE =====');
+      console.log(`📋 Payment Intent ID: ${response.paymentIntentId}`);
+      console.log(`💰 Amount: $${response.amount}`);
+      console.log(`💱 Currency: ${response.currency}`);
+      console.log(`📊 Status: ${response.status}`);
+
+      return response;
     } catch (error) {
+      console.log(`❌ ERROR en createPaymentIntent: ${error.message}`);
+      console.log(`❌ Error stack: ${error.stack}`);
       this.logger.error(`Error creating payment intent: ${error.message}`);
       throw error;
     }

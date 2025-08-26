@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
@@ -17,10 +17,16 @@ import { CartModule } from '../cart/cart.module';
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
-    CartModule,
+    forwardRef(() => CartModule),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
+  providers: [
+    PaymentsService, 
+    PaymentOrderService, 
+    PaymentCalculationService, 
+    PaymentManagementService, 
+    WebhookMonitoringService
+  ],
   exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
 })
 export class PaymentsModule {}

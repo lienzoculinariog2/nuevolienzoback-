@@ -204,12 +204,11 @@ export class OrdersService {
         throw new NotFoundException(`Order with ID ${orderId} not found`);
       }
       if (
-        order.status === OrderStatus.SHIPPED ||
-        order.status === OrderStatus.DELIVERED ||
-        order.status === OrderStatus.CANCELED
+        order.status === OrderStatus.COMPLETED ||
+        order.status === OrderStatus.CANCELLED
       ) {
         throw new BadRequestException(
-          'Cannot cancel an order that is already shipped, delivered, or canceled.',
+          'Cannot cancel an order that is already completed or canceled.',
         );
       }
 
@@ -220,7 +219,7 @@ export class OrdersService {
           await manager.save(Products, product);
         }
       }
-      order.status = OrderStatus.CANCELED;
+      order.status = OrderStatus.CANCELLED;
       const canceledOrder = await manager.save(Orders, order);
       return canceledOrder;
     });
@@ -235,15 +234,15 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    if (newStatus === OrderStatus.SHIPPED) {
+    if (newStatus === OrderStatus.PROCESSING) {
       if (order.status !== OrderStatus.PENDING) {
-        throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
+        throw new BadRequestException('Order must be in PENDING status to be PROCESSING.');
       }
-    } else if (newStatus === OrderStatus.DELIVERED) {
-      if (order.status !== OrderStatus.SHIPPED) {
-        throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
+    } else if (newStatus === OrderStatus.COMPLETED) {
+      if (order.status !== OrderStatus.PROCESSING && order.status !== OrderStatus.PENDING) {
+        throw new BadRequestException('Order must be in PENDING or PROCESSING status to be COMPLETED.');
       }
-    } else if (newStatus === OrderStatus.CANCELED) {
+    } else if (newStatus === OrderStatus.CANCELLED) {
       throw new BadRequestException('Use cancel button, which handles stock replenishment.');
     }
 

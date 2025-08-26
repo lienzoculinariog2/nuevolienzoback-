@@ -1,24 +1,23 @@
 import {
   Controller,
-  Post,
   Get,
+  Post,
   Body,
   Param,
+  HttpException,
+  HttpStatus,
+  Logger,
   Headers,
   Req,
-  HttpStatus,
-  HttpException,
-  Logger,
 } from '@nestjs/common';
-import type { RawBodyRequest } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { Request } from 'express';
-import Stripe from 'stripe';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
-import { PaymentManagementService } from './services/payment-management.service';
 import { CreatePaymentIntentDto, CreatePaymentForOrderDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import Stripe from 'stripe';
+import type { Request } from 'express';
+import { PaymentManagementService } from './services/payment-management.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
 
 @ApiTags('payments')
@@ -243,45 +242,62 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Handle Stripe webhooks' })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
   async handleWebhook(
-    @Req() request: RawBodyRequest<Request>,
+    @Req() request: Request,
     @Headers('stripe-signature') signature: string,
   ) {
     try {
-      // 🔍 DEBUGGING: Log información del request
-      this.logger.log('🔍 Webhook received:');
-      this.logger.log(`Headers: ${JSON.stringify(request.headers)}`);
-      this.logger.log(`Raw body exists: ${!!request.rawBody}`);
-      this.logger.log(`Raw body length: ${request.rawBody?.length || 0}`);
-      this.logger.log(`Body exists: ${!!request.body}`);
-      this.logger.log(`Signature: ${signature ? 'Present' : 'Missing'}`);
+      // 🔍 DEBUGGING: Log información detallada del request
+      console.log('🔔 ===== WEBHOOK RECIBIDO =====');
+      console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+      console.log(`🌐 URL: ${request.url}`);
+      console.log(`📋 Method: ${request.method}`);
+      console.log(`📦 Headers: ${JSON.stringify(request.headers, null, 2)}`);
+      console.log(`📏 Raw body exists: ${!!request.body}`);
+      console.log(`📏 Raw body length: ${request.body?.length || 0}`);
+      console.log(`📏 Raw body type: ${typeof request.body}`);
+      console.log(`🔑 Signature exists: ${!!signature}`);
+      console.log(`🔑 Signature: ${signature ? signature.substring(0, 50) + '...' : 'MISSING'}`);
 
-      // 🛡️ Use request.body as fallback if rawBody is not available
-      const payload = request.rawBody || Buffer.from(JSON.stringify(request.body));
+      // 🛡️ Use request.body as Buffer (express.raw() provides it as Buffer)
+      const payload = request.body as Buffer;
 
       if (!payload) {
-        this.logger.error('❌ No payload available');
+        console.log('❌ ERROR: No payload available');
+        this.logger.error('❌ ERROR: No payload available');
         throw new Error('No payload available');
       }
 
       if (!signature) {
-        this.logger.error('❌ No stripe-signature header');
+        console.log('❌ ERROR: No stripe-signature header');
+        this.logger.error('❌ ERROR: No stripe-signature header');
         throw new Error('No stripe-signature header');
       }
 
+      console.log('🔍 ===== VERIFICANDO WEBHOOK =====');
       const event = await this.paymentsService.handleWebhook(payload, signature);
-      this.logger.log(`✅ Webhook verified successfully: ${event.type}`);
+      console.log(`✅ Webhook verified successfully: ${event.type}`);
+      console.log(`📋 Event data: ${JSON.stringify(event.data, null, 2)}`);
 
       // 🛡️ Use the new payment management service for all webhook events
+      console.log('🔍 ===== PROCESANDO EVENTO =====');
       await this.handleWebhookEvent(event);
 
-      this.logger.log('✅ Webhook processed successfully');
+      console.log('✅ ===== WEBHOOK PROCESADO EXITOSAMENTE =====');
       return { received: true };
     } catch (error) {
-      this.logger.error(`❌ Webhook error: ${error.message}`);
+      console.log('❌ ===== ERROR EN WEBHOOK =====');
+      console.log(`❌ Error message: ${error.message}`);
+      console.log(`❌ Error stack: ${error.stack}`);
+      console.log(`❌ Error name: ${error.name}`);
+      
+      this.logger.error('❌ ===== ERROR EN WEBHOOK =====');
+      this.logger.error(`❌ Error message: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
+      this.logger.error(`❌ Error name: ${error.name}`);
       
       // 🔍 DEBUGGING: Log más información del error
       if (error.message.includes('signature')) {
+        console.log('🔍 Signature verification failed - Check webhook secret');
         this.logger.error('🔍 Signature verification failed - Check webhook secret');
       }
       
@@ -291,11 +307,12 @@ export class PaymentsController {
           error: 'Webhook error',
           message: error.message,
           details: {
-            hasRawBody: !!request.rawBody,
-            rawBodyLength: request.rawBody?.length || 0,
-            hasBody: !!request.body,
+            hasRawBody: !!request.body,
+            rawBodyLength: request.body?.length || 0,
             hasSignature: !!signature,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            errorName: error.name,
+            errorStack: error.stack?.split('\n')[0]
           }
         },
         HttpStatus.BAD_REQUEST,
@@ -322,38 +339,44 @@ export class PaymentsController {
 
   private async handlePaymentIntentEvent(event: Stripe.Event) {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    this.logger.log(`Processing payment intent event: ${event.type} for ${paymentIntent.id}`);
+    this.logger.log(`🔍 ===== PROCESANDO PAYMENT INTENT: ${event.type} =====`);
+    this.logger.log(`📋 Payment Intent ID: ${paymentIntent.id}`);
+    this.logger.log(`💰 Amount: ${paymentIntent.amount}`);
+    this.logger.log(`💱 Currency: ${paymentIntent.currency}`);
+    this.logger.log(`📊 Status: ${paymentIntent.status}`);
     
     try {
       // Handle specific event types using PaymentOrderService directly
       switch (event.type) {
         case 'payment_intent.succeeded':
+          this.logger.log('🔄 Llamando a handlePaymentSuccess...');
           await this.paymentOrderService.handlePaymentSuccess(paymentIntent.id);
+          this.logger.log('✅ handlePaymentSuccess completado');
           break;
         case 'payment_intent.payment_failed':
+          this.logger.log('🔄 Llamando a handlePaymentFailure...');
           await this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
+          this.logger.log('✅ handlePaymentFailure completado');
           break;
         case 'payment_intent.canceled':
           // Handle canceled payment
-          this.logger.log(`Payment intent ${paymentIntent.id} was canceled`);
+          this.logger.log(`⚠️ Payment intent ${paymentIntent.id} was canceled`);
           break;
         case 'payment_intent.processing':
-        case 'payment_intent.requires_action':
-          // Log processing states
-          this.logger.log(`Payment intent ${paymentIntent.id} is ${event.type}`);
+          this.logger.log(`⏳ Payment intent ${paymentIntent.id} is processing`);
           break;
-      }
-    } catch (error) {
-      // 🛡️ Handle case where payment doesn't exist in database (common with test events)
-      if (error.message.includes('not found')) {
-        this.logger.warn(`⚠️ Payment intent ${paymentIntent.id} not found in database. This is normal for test events.`);
-        this.logger.log(`📝 Event type: ${event.type}, Amount: ${paymentIntent.amount}, Currency: ${paymentIntent.currency}`);
-        return; // Don't throw error, just log and continue
+        case 'payment_intent.requires_action':
+          this.logger.log(`🔄 Payment intent ${paymentIntent.id} requires action`);
+          break;
+        default:
+          this.logger.log(`⚠️ Unhandled payment intent event: ${event.type}`);
       }
       
-      // 🚨 Log other errors
-      this.logger.error(`Error processing payment intent event: ${error.message}`);
-      throw error; // Re-throw other errors
+      this.logger.log(`✅ Payment Intent ${paymentIntent.id} procesado exitosamente`);
+    } catch (error) {
+      this.logger.error(`❌ Error procesando Payment Intent ${paymentIntent.id}: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
+      throw error;
     }
   }
 

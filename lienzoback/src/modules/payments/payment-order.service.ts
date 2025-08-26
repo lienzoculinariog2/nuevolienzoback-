@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Orders, OrderStatus } from '../orders/entities/order.entity';
@@ -22,7 +22,9 @@ export class PaymentOrderService {
     private readonly orderDetailRepository: Repository<OrderDetail>,
     @InjectRepository(Products)
     private readonly productsRepository: Repository<Products>,
+    @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
+    @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
   ) {}
 
@@ -68,43 +70,58 @@ export class PaymentOrderService {
 
   async handlePaymentSuccess(paymentIntentId: string) {
     try {
+      this.logger.log(`🔍 ===== MANEJANDO PAGO EXITOSO =====`);
+      this.logger.log(`📋 Payment Intent ID: ${paymentIntentId}`);
+      
       // Find payment by payment intent ID
+      this.logger.log('🔍 Buscando pago en la base de datos...');
       const payment = await this.paymentRepository.findOne({
         where: { stripePaymentIntentId: paymentIntentId },
         relations: ['order'],
       });
 
       if (!payment) {
-        this.logger.warn(`No payment found for payment intent: ${paymentIntentId}`);
+        this.logger.warn(`⚠️ No payment found for payment intent: ${paymentIntentId}`);
         return;
       }
 
+      this.logger.log(`✅ Pago encontrado: ID ${payment.id}, Order ID: ${payment.orderId}`);
+
       // Update payment status
+      this.logger.log('🔄 Actualizando estado del pago...');
       await this.paymentRepository.update(payment.id, {
         status: PaymentStatus.SUCCEEDED,
         processedAt: new Date(),
       });
+      this.logger.log('✅ Estado del pago actualizado');
 
       // Update order status
+      this.logger.log('🔄 Actualizando estado de la orden...');
       await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.PAID,
+        status: OrderStatus.COMPLETED,
       });
+      this.logger.log('✅ Estado de la orden actualizado');
 
       // Update product stock
+      this.logger.log('🔄 Actualizando stock de productos...');
       await this.updateProductStock(payment.orderId);
+      this.logger.log('✅ Stock de productos actualizado');
 
       // Clear the user's cart after successful payment
       try {
+        this.logger.log(`🔄 Limpiando carrito para usuario: ${payment.order.userId}`);
         await this.cartService.clearCart(payment.order.userId);
-        this.logger.log(`Cart cleared for user ${payment.order.userId} after successful payment`);
+        this.logger.log(`✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`);
       } catch (cartError) {
-        this.logger.warn(`Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
+        this.logger.warn(`⚠️ Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
         // Don't throw error here as the payment was successful
       }
 
-      this.logger.log(`Order ${payment.orderId} marked as paid, stock updated, and cart cleared`);
+      this.logger.log(`✅ ===== PAGO EXITOSO COMPLETADO =====`);
+      this.logger.log(`📋 Order ${payment.orderId} marcada como pagada, stock actualizado y carrito limpiado`);
     } catch (error) {
-      this.logger.error(`Error handling payment success: ${error.message}`);
+      this.logger.error(`❌ Error handling payment success: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
       throw error;
     }
   }
@@ -130,7 +147,7 @@ export class PaymentOrderService {
 
       // Update order status
       await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.PAYMENT_FAILED,
+        status: OrderStatus.FAILED,
       });
 
       this.logger.log(`Order ${payment.orderId} marked as payment failed`);
@@ -185,31 +202,54 @@ export class PaymentOrderService {
    */
   private async updateProductStock(orderId: string): Promise<void> {
     try {
+      console.log('📦 ===== ACTUALIZANDO STOCK DE PRODUCTOS =====');
+      console.log(`📋 Order ID: ${orderId}`);
+
       // Get order details with products
+      console.log('🔍 Obteniendo detalles de la orden...');
       const orderDetails = await this.orderDetailRepository.find({
         where: { order: { id: orderId } },
         relations: ['product'],
       });
 
+      console.log(`📦 Encontrados ${orderDetails.length} items en la orden`);
+
       for (const detail of orderDetails) {
+        console.log(`🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`);
+        
         if (detail.product) {
           const product = await this.productsRepository.findOneBy({ id: detail.product.id });
           if (product) {
+            console.log(`📦 Producto: ${product.name}`);
+            console.log(`📊 Stock actual: ${product.stock}`);
+            console.log(`📉 Cantidad a descontar: ${detail.quantity}`);
+            
             // Decrease stock
-            product.stock -= detail.quantity;
+            const newStock = product.stock - detail.quantity;
+            product.stock = newStock;
+            
+            console.log(`📊 Nuevo stock: ${newStock}`);
             
             // Deactivate product if stock reaches 0
             if (product.stock <= 0) {
               product.isActive = false;
-              this.logger.log(`Product ${product.name} deactivated due to zero stock`);
+              console.log(`⚠️ Producto ${product.name} desactivado por stock agotado`);
             }
             
             await this.productsRepository.save(product);
-            this.logger.log(`Stock updated for product ${product.name}: -${detail.quantity} (new stock: ${product.stock})`);
+            console.log(`✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`);
+          } else {
+            console.log(`⚠️ Producto con ID ${detail.product.id} no encontrado`);
           }
+        } else {
+          console.log(`⚠️ Item sin producto asociado`);
         }
       }
+
+      console.log('✅ ===== STOCK DE PRODUCTOS ACTUALIZADO EXITOSAMENTE =====');
     } catch (error) {
+      console.log(`❌ ERROR en updateProductStock: ${error.message}`);
+      console.log(`❌ Error stack: ${error.stack}`);
       this.logger.error(`Error updating product stock for order ${orderId}: ${error.message}`);
       throw error;
     }

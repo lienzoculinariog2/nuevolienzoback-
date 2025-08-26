@@ -38,17 +38,8 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   // 🛡️ IMPORTANTE: Configurar middleware específico para Stripe webhook
-  app.use('/payments/webhook', (req: any, _res: any, next: any) => {
-    let data = '';
-    req.setEncoding('utf8');
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      req.rawBody = Buffer.from(data);
-      next();
-    });
-  });
+  // Usar express.raw() para preservar el raw body
+  app.use('/payments/webhook', express.raw({ type: 'application/json' }));
 
   app.useGlobalPipes(new ValidationPipe());
 
