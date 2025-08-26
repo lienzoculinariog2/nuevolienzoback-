@@ -67,21 +67,23 @@ export class CreateProductsTable1703123456790 implements MigrationInterface {
 
     // Verificar si la foreign key ya existe antes de crearla
     const table = await queryRunner.getTable('products');
-    const foreignKeyExists = table.foreignKeys.find(fk => fk.columnNames.indexOf('category_id') !== -1);
-    
-    if (!foreignKeyExists) {
-      // Agregar foreign key a categories
-      await queryRunner.createForeignKey(
-        'products',
-        new TableForeignKey({
-          columnNames: ['category_id'],
-          referencedColumnNames: ['id'],
-          referencedTableName: 'categories',
-          onDelete: 'SET NULL',
-          onUpdate: 'CASCADE',
-        })
-      );
-      console.log('✅ Foreign key category_id agregada a products');
+    if (table) {
+      const foreignKeyExists = table.foreignKeys.find(fk => fk.columnNames.indexOf('category_id') !== -1);
+      
+      if (!foreignKeyExists) {
+        // Agregar foreign key a categories
+        await queryRunner.createForeignKey(
+          'products',
+          new TableForeignKey({
+            columnNames: ['category_id'],
+            referencedColumnNames: ['id'],
+            referencedTableName: 'categories',
+            onDelete: 'SET NULL',
+            onUpdate: 'CASCADE',
+          })
+        );
+        console.log('✅ Foreign key category_id agregada a products');
+      }
     }
 
     console.log('✅ Tabla products creada exitosamente');
@@ -89,8 +91,12 @@ export class CreateProductsTable1703123456790 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const table = await queryRunner.getTable('products');
-    const foreignKey = table.foreignKeys.find(fk => fk.columnNames.indexOf('category_id') !== -1);
-    await queryRunner.dropForeignKey('products', foreignKey);
+    if (table) {
+      const foreignKey = table.foreignKeys.find(fk => fk.columnNames.indexOf('category_id') !== -1);
+      if (foreignKey) {
+        await queryRunner.dropForeignKey('products', foreignKey);
+      }
+    }
     await queryRunner.dropTable('products');
   }
 }
