@@ -1,31 +1,47 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Cart } from '../cart/entities/cart.entity';
-import { Products } from '../products/entities/product.entity';
+import { CartItem } from '../cart/entities/cart-item.entity';
 import { Users } from '../users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { Orders, OrderStatus } from '../orders/entities/order.entity';
+import { OrderDetail } from '../orders/entities/order-detail.entity';
+import { Products } from '../products/entities/product.entity';
+import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
+import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { CheckoutDto } from './dto/check-out.dto';
 import { CartService } from '../cart/cart.service';
-import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
 import { DiscountCodesService } from '../discount-codes/discount-codes.service';
-import { OrdersService } from '../orders/orders.service';
-import { OrderItemDto } from '../orders/dto/create-order.dto';
 
 @Injectable()
 export class CheckoutService {
   constructor(
     @InjectRepository(Cart)
     private cartRepository: Repository<Cart>,
-    @InjectRepository(Products)
-    private productsRepository: Repository<Products>,
     @InjectRepository(Users)
     private usersRepository: Repository<Users>,
+    @InjectRepository(Orders)
+    private ordersRepository: Repository<Orders>,
+    @InjectRepository(OrderDetail)
+    private orderDetailRepository: Repository<OrderDetail>,
+    @InjectRepository(Products)
+    private productsRepository: Repository<Products>,
     @InjectRepository(DiscountCodesUsed)
     private discountCodesUsedRepository: Repository<DiscountCodesUsed>,
     private readonly discountCodesService: DiscountCodesService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  async checkout(userId: string, checkoutDto: CheckoutDto) {
+  async applyDiscount(
+    userId: string,
+    checkoutDto: CheckoutDto,
+  ): Promise<{
+    orderItems: any[];
+    subTotal: number;
+    finalTotal: number;
+    discountAmount: number;
+    discountCode?: string;
+  }> {
     const user = await this.usersRepository.findOneBy({ id: userId });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -33,43 +49,94 @@ export class CheckoutService {
 
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['items', 'items.product', 'user'],
+      relations: ['items', 'items.product'],
     });
 
     if (!cart || cart.items.length === 0) {
       throw new BadRequestException('Cart is empty');
     }
 
-    // Filtrar items que no tienen producto asociado
-    const validItems = cart.items.filter(item => item.product && item.product.id);
-    if (validItems.length === 0) {
-      throw new BadRequestException('No valid items found in cart');
+    const { orderItems, subTotal, finalTotal, discountCode } =
+      await this.validateAndCalculateTotals(cart, checkoutDto, userId);
+
+    const discountAmount = parseFloat((subTotal - finalTotal).toFixed(2));
+
+    return {
+      orderItems,
+      subTotal,
+      finalTotal,
+      discountAmount,
+      discountCode: discountCode?.code,
+    };
+  }
+
+  async processCompleteCheckout(
+    userId: string,
+    checkoutDto: CheckoutDto,
+  ): Promise<{
+    orderId: string;
+    order: Orders;
+    message: string;
+  }> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    let subTotal = 0;
-    const orderItems: OrderItemDto[] = [];
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
 
-    for (const item of validItems) {
-      // Verificar que el producto existe en la relación
-      if (!item.product || !item.product.id) {
-        throw new NotFoundException(`Product not found for cart item ${item.id}`);
-      }
-      
+    if (!cart || cart.items.length === 0) {
+      throw new BadRequestException('Cart is empty');
+    }
+
+    const { orderItems, finalTotal, discountCode } = await this.validateAndCalculateTotals(
+      cart,
+      checkoutDto,
+      userId,
+    );
+
+    const order = await this.createOrder(userId, orderItems, finalTotal, discountCode);
+
+    //await this.clearCart(cart.id);
+
+    return {
+      orderId: order.id,
+      order,
+      message: 'Checkout procesado exitosamente. Pre-orden creada.',
+    };
+  }
+
+  private async validateAndCalculateTotals(
+    cart: Cart,
+    checkoutDto: CheckoutDto,
+    userId: string,
+  ): Promise<{
+    orderItems: any[];
+    subTotal: number;
+    finalTotal: number;
+    discountCode?: DiscountCodes;
+  }> {
+    let subTotal = 0;
+    const orderItems: any[] = [];
+
+    for (const item of cart.items) {
       const product = await this.productsRepository.findOneBy({ id: item.product.id });
       if (!product) {
-        throw new NotFoundException(`Product with id ${item.product.id} not found`);
+        throw new NotFoundException(`Producto ${item.product.id} no encontrado`);
       }
       if (product.stock === 0) {
-        throw new BadRequestException(
-          `The product ${product.name} is out of stock and cannot be added to the order.`,
-        );
+        throw new BadRequestException(`El producto ${product.name} está agotado`);
       }
       if (product.stock < item.quantity) {
-        throw new BadRequestException(`Not enough stock for product ${product.name}`);
+        throw new BadRequestException(
+          `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`,
+        );
       }
-
-      subTotal += item.quantity * product.price;
-
+      const itemTotal = item.quantity * product.price;
+      subTotal += itemTotal;
       orderItems.push({
         productId: item.product.id,
         quantity: item.quantity,
@@ -79,127 +146,83 @@ export class CheckoutService {
     }
 
     let finalTotal = subTotal;
-    let savings = 0; // Se inicializa savings en 0 aquí
-    let appliedDiscountCode: string | undefined = undefined;
-    let discountPercentage: number | undefined = undefined;
+    let discountCode: DiscountCodes | undefined = undefined;
 
     if (checkoutDto.discountCode) {
-      const discount = await this.discountCodesService.findOne(checkoutDto.discountCode);
-
-      if (!discount) {
-        throw new NotFoundException('Discount code not found or is not valid.');
+      discountCode = await this.validateDiscountCode(checkoutDto.discountCode, userId);
+      if (discountCode) {
+        const savings = subTotal * (discountCode.percentage / 100);
+        finalTotal = subTotal - savings;
       }
-
-      if (discount.isSingleUsePerUser) {
-        const usedCode = await this.discountCodesUsedRepository.findOne({
-          where: {
-            discountCode: { id: discount.id },
-            user: { id: userId },
-          },
-        });
-        if (usedCode) {
-          throw new BadRequestException('This discount code has already been used by this user.');
-        }
-      }
-
-      // Este es el cálculo que necesitas mover fuera del if de 'isSingleUsePerUser'
-      savings = subTotal * (discount.percentage / 100);
-      finalTotal = subTotal - savings;
-      appliedDiscountCode = discount.code;
-      discountPercentage = discount.percentage;
     }
 
     return {
-      message: 'Checkout successful',
-      subTotal: subTotal,
-      savings: savings,
-      discountPercentage: discountPercentage ? `${discountPercentage}%` : undefined,
-      finalTotal: finalTotal,
-      orderItems: orderItems,
+      orderItems,
+      subTotal,
+      finalTotal,
+      discountCode,
     };
   }
 
-  /**
-   * Diagnosticar carrito del usuario (solo lectura, no modifica datos)
-   */
-  async diagnoseCart(userId: string) {
-    const user = await this.usersRepository.findOneBy({ id: userId });
-    if (!user) {
-      throw new NotFoundException('User not found');
+  private async validateDiscountCode(discountCode: string, userId: string): Promise<DiscountCodes> {
+    const discount = await this.discountCodesService.findOne(discountCode);
+    if (!discount) {
+      throw new NotFoundException('Código de descuento no válido');
     }
+    if (discount.isSingleUsePerUser) {
+      const usedCode = await this.discountCodesUsedRepository.findOne({
+        where: {
+          discountCode: { id: discount.id },
+          user: { id: userId },
+        },
+      });
+      if (usedCode) {
+        throw new BadRequestException('Este código de descuento ya ha sido usado por este usuario');
+      }
+    }
+    return discount;
+  }
 
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['items', 'items.product', 'user'],
+  private async createOrder(
+    userId: string,
+    orderItems: any[],
+    finalTotal: number,
+    discountCode?: DiscountCodes,
+  ): Promise<Orders> {
+    return this.dataSource.transaction(async (manager) => {
+      const order = this.ordersRepository.create({
+        userId: userId,
+        status: OrderStatus.PENDING,
+        date: new Date(),
+        totalAmount: finalTotal,
+        isPaid: false,
+        paymentStatus: 'pending',
+      });
+      const savedOrder = await manager.save(Orders, order);
+      const orderDetails = orderItems.map((item) =>
+        this.orderDetailRepository.create({
+          orderId: savedOrder.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        }),
+      );
+      await manager.save(OrderDetail, orderDetails);
+      if (discountCode) {
+        const discountUsed = this.discountCodesUsedRepository.create({
+          discountCode: { id: discountCode.id },
+          user: { id: userId },
+          order: savedOrder,
+          usedAt: new Date(),
+        });
+        await manager.save(DiscountCodesUsed, discountUsed);
+      }
+      return savedOrder;
     });
-
-    if (!cart) {
-      return {
-        status: 'no_cart',
-        message: 'User has no cart',
-        issues: []
-      };
-    }
-
-    if (cart.items.length === 0) {
-      return {
-        status: 'empty_cart',
-        message: 'Cart is empty',
-        issues: []
-      };
-    }
-
-    const issues: string[] = [];
-    const validItems: Array<{
-      id: string;
-      productId: string;
-      productName: string;
-      quantity: number;
-      price: number;
-    }> = [];
-    const invalidItems: Array<{
-      id: string;
-      productId?: string;
-      issue: string;
-    }> = [];
-
-    for (const item of cart.items) {
-      if (!item.product || !item.product.id) {
-        issues.push(`Cart item ${item.id} has no product associated`);
-        invalidItems.push({
-          id: item.id,
-          issue: 'no_product'
-        });
-      } else {
-        const product = await this.productsRepository.findOneBy({ id: item.product.id });
-        if (!product) {
-          issues.push(`Product ${item.product.id} not found in database`);
-          invalidItems.push({
-            id: item.id,
-            productId: item.product.id,
-            issue: 'product_not_found'
-          });
-        } else {
-          validItems.push({
-            id: item.id,
-            productId: item.product.id,
-            productName: product.name,
-            quantity: item.quantity,
-            price: product.price
-          });
-        }
-      }
-    }
-
-    return {
-      status: issues.length > 0 ? 'has_issues' : 'healthy',
-      message: issues.length > 0 ? 'Cart has issues' : 'Cart is healthy',
-      totalItems: cart.items.length,
-      validItemsCount: validItems.length,
-      invalidItemsCount: invalidItems.length,
-      issues,
-      validItems,
-      invalidItems
-    };
   }
+
+  // private async clearCart(cartId: string): Promise<void> {
+  //   await this.cartItemRepository.delete({ cart: { id: cartId } });
+  //   await this.cartRepository.update(cartId, { isActive: false });
+  // }
 }

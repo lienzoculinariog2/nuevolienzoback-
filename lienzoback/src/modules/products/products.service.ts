@@ -15,7 +15,6 @@ import { IngredientsService } from '../ingredients/ingredients.service';
 import { PaginatedResponse } from './dto/paginated-response.interface';
 import { v2 as cloudinary } from 'cloudinary';
 
-
 @Injectable()
 export class ProductsService {
   constructor(
@@ -331,7 +330,7 @@ export class ProductsService {
       where: {
         product: { id },
         order: {
-          status: Not(In([OrderStatus.CANCELLED, OrderStatus.COMPLETED])),
+          status: Not(In([OrderStatus.CANCELED, OrderStatus.DELIVERED])),
         },
       },
     });

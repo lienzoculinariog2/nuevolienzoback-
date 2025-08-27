@@ -12,21 +12,29 @@ import { Products } from '../products/entities/product.entity';
 import { Payment } from './entities/payment.entity';
 import { ConfigModule } from '@nestjs/config';
 import { CartModule } from '../cart/cart.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
     forwardRef(() => CartModule),
+    NotificationsModule,
   ],
   controllers: [PaymentsController],
   providers: [
-    PaymentsService, 
-    PaymentOrderService, 
-    PaymentCalculationService, 
-    PaymentManagementService, 
-    WebhookMonitoringService
+    PaymentsService,
+    PaymentOrderService,
+    PaymentCalculationService,
+    PaymentManagementService,
+    WebhookMonitoringService,
   ],
-  exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
+  exports: [
+    PaymentsService,
+    PaymentOrderService,
+    PaymentCalculationService,
+    PaymentManagementService,
+    WebhookMonitoringService,
+  ],
 })
 export class PaymentsModule {}

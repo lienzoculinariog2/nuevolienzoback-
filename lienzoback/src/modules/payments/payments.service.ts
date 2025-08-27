@@ -42,7 +42,9 @@ export class PaymentsService {
         console.log('🔍 Verificando idempotencia...');
         const existingPayment = await this.checkIdempotency(idempotencyKey, orderId);
         if (existingPayment) {
-          console.log(`⚠️ Pago duplicado detectado para orden ${orderId} con key ${idempotencyKey}`);
+          console.log(
+            `⚠️ Pago duplicado detectado para orden ${orderId} con key ${idempotencyKey}`,
+          );
           this.logger.warn(
             `Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`,
           );
@@ -54,7 +56,9 @@ export class PaymentsService {
       // 🛡️ SECURITY: Calculate amount server-side, don't trust client
       console.log('💰 Calculando resumen de la orden...');
       const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
-      console.log(`📊 Order Summary: Amount: $${orderSummary.amount}, Currency: ${orderSummary.currency}`);
+      console.log(
+        `📊 Order Summary: Amount: $${orderSummary.amount}, Currency: ${orderSummary.currency}`,
+      );
 
       // Validate that order is not already paid
       if (orderSummary.amount <= 0) {

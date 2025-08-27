@@ -27,7 +27,7 @@ try {
   files.forEach(file => {
     const sourceFile = path.join(sourceDir, file);
     const targetFile = path.join(targetDir, file);
-    
+
     if (fs.statSync(sourceFile).isFile()) {
       fs.copyFileSync(sourceFile, targetFile);
       console.log(`✅ Copiado: ${file}`);

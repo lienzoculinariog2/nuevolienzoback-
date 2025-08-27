@@ -7,10 +7,9 @@ import { Payment } from 'src/modules/payments/entities/payment.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  FAILED = 'failed',
+  SHIPPED = 'shipped',
+  DELIVERED = 'delivered',
+  CANCELED = 'canceled',
 }
 
 @Entity({ name: 'orders' })
@@ -24,7 +23,7 @@ export class Orders {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
+  @Column({ name: 'total', type: 'decimal', precision: 4, scale: 2 })
   totalAmount: number;
 
   @Column({ name: 'statusOrder', type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
@@ -57,4 +56,5 @@ export class Orders {
 
   @OneToMany(() => Payment, (payment) => payment.order)
   payments: Payment[];
+  statusOrder: OrderStatus;
 }
