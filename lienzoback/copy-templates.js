@@ -1,41 +1,35 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('📁 Copiando plantillas de email...');
+const srcDir = path.join(process.cwd(), 'src', 'modules', 'notifications', 'templates');
+const destDir = path.join(process.cwd(), 'dist', 'src', 'modules', 'notifications', 'templates');
 
-const sourceDir = path.join(__dirname, 'src/modules/notifications/templates');
-const targetDir = path.join(__dirname, 'dist/modules/notifications/templates');
-
-try {
-  // Verificar si el directorio fuente existe
-  if (!fs.existsSync(sourceDir)) {
-    console.error(`❌ Directorio fuente no existe: ${sourceDir}`);
-    process.exit(1);
-  }
-
-  // Crear directorio destino si no existe
-  if (!fs.existsSync(targetDir)) {
-    console.log(`📁 Creando directorio: ${targetDir}`);
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-
-  // Leer archivos del directorio fuente
-  const files = fs.readdirSync(sourceDir);
-  console.log(`📋 Archivos encontrados: ${files.length}`);
-
-  // Copiar cada archivo
-  files.forEach(file => {
-    const sourceFile = path.join(sourceDir, file);
-    const targetFile = path.join(targetDir, file);
-
-    if (fs.statSync(sourceFile).isFile()) {
-      fs.copyFileSync(sourceFile, targetFile);
-      console.log(`✅ Copiado: ${file}`);
-    }
-  });
-
-  console.log('🎉 Plantillas copiadas exitosamente');
-} catch (error) {
-  console.error('❌ Error copiando plantillas:', error.message);
-  process.exit(1);
+function ensureDir(p) {
+  fs.mkdirSync(p, { recursive: true });
 }
+
+function copyDir(src, dest) {
+  ensureDir(dest);
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(s, d);
+    } else {
+      fs.copyFileSync(s, d);
+    }
+  }
+}
+
+(function main() {
+  if (!fs.existsSync(srcDir)) {
+    console.warn([copy - templates] No se encontró la carpeta de templates: ${ srcDir });
+    process.exit(0);
+  }
+
+  copyDir(srcDir, destDir);
+
+  const files = fs.readdirSync(destDir);
+  console.log([copy - templates] Copiados a ${ destDir }:, files);
+})();

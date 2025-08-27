@@ -38,9 +38,9 @@ const config = {
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
   // Sincronización habilitada temporalmente en producción para crear tablas
-  synchronize: isProduction ? true : false,
+  synchronize: isProduction ? true : true,
   logging: !isProduction, // Solo logging en desarrollo
-  dropSchema: process.env.TYPEORM_DROP === 'true',
+  dropSchema: true,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/migrations/*{.ts,.js}'],
   // Configuración SSL para Render

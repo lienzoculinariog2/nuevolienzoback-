@@ -29,11 +29,9 @@ import { NotificationsController } from './notifications.controller';
           from: `"Lienzo Culinario" <${configService.get('EMAIL_USER')}>`,
         },
         template: {
-          dir: path.resolve(__dirname, 'templates', 'modules', 'notifications', 'templates'),
+          dir: path.join(process.cwd(), 'dist', 'src', 'modules', 'notifications', 'templates'),
           adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
-          },
+          options: { strict: true },
         },
       }),
       inject: [ConfigService],
