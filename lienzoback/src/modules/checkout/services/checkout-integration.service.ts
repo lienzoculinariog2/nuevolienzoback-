@@ -85,10 +85,10 @@ export class CheckoutIntegrationService {
       // 5. Crear la orden
       const order = await this.createOrder(userId, orderItems, subTotal, finalTotal, checkoutDto.shippingAddress, discountCode);
 
-      // 6. Limpiar carrito después de crear la orden
-      await this.clearCart(cart.id);
+      // NOTA: El carrito se limpia cuando el pago sea exitoso, no aquí
+      // para evitar problemas si el pago falla
 
-      // 7. Crear payment intent
+      // 6. Crear payment intent
       const paymentIntentDto: CreatePaymentIntentDto = {
         orderId: order.id,
         customerEmail: user.email,
@@ -233,14 +233,8 @@ export class CheckoutIntegrationService {
 
       await manager.save(OrderDetail, orderDetails);
 
-      // Descontar stock de productos
-      for (const item of orderItems) {
-        const product = await manager.findOne(Products, { where: { id: item.productId } });
-        if (product) {
-          product.stock -= item.quantity;
-          await manager.save(Products, product);
-        }
-      }
+      // NOTA: El stock se descuenta cuando el pago sea exitoso, no aquí
+      // para evitar descuentos dobles. Ver payment-order.service.ts
 
       // Marcar código de descuento como usado si existe
       if (discountCode) {
@@ -257,21 +251,4 @@ export class CheckoutIntegrationService {
     });
   }
 
-  /**
-   * Limpiar carrito después del checkout
-   */
-  private async clearCart(cartId: string): Promise<void> {
-    try {
-      // Eliminar todos los items del carrito
-      await this.cartItemRepository.delete({ cart: { id: cartId } });
-      
-      // Desactivar el carrito
-      await this.cartRepository.update(cartId, { isActive: false });
-      
-      this.logger.log(`Carrito ${cartId} limpiado exitosamente`);
-    } catch (error) {
-      this.logger.error(`Error limpiando carrito ${cartId}: ${error.message}`);
-      // No lanzamos el error para no afectar el checkout
-    }
-  }
 }

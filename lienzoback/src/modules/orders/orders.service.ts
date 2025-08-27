@@ -120,8 +120,10 @@ export class OrdersService {
 
         await manager.save(OrderDetail, orderDetail);
 
-        product.stock -= itemDto.quantity;
-        await manager.save(Products, product);
+        // NOTA: El stock se descuenta cuando el pago sea exitoso, no aquí
+        // para evitar descuentos dobles. Ver payment-order.service.ts
+        // product.stock -= itemDto.quantity;
+        // await manager.save(Products, product);
       }
 
       const userCart = await manager.findOne(Cart, {

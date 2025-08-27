@@ -65,9 +65,13 @@ export class AppModule implements OnModuleInit {
   async onModuleInit() {
     console.info('🔄 Iniciando aplicación...');
 
-    // Ejecutar migraciones primero
-    console.info('📦 Ejecutando migraciones...');
-    await this.migrationService.runMigrations();
+    // Ejecutar migraciones solo en producción
+    if (process.env.NODE_ENV === 'production') {
+      console.info('📦 Ejecutando migraciones...');
+      await this.migrationService.runMigrations();
+    } else {
+      console.info('🔄 Modo desarrollo: saltando migraciones (synchronize: true)');
+    }
 
     console.info('🌱 Ejecutando seeders...');
 

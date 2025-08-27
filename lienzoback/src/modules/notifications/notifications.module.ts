@@ -31,10 +31,7 @@ import { NotificationsController } from './notifications.controller';
         template: {
           dir: path.resolve(
             __dirname,
-            '..',
-            '..',
-            '..',
-            'src',
+            'templates',
             'modules',
             'notifications',
             'templates',

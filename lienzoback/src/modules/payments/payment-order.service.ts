@@ -130,6 +130,9 @@ export class PaymentOrderService {
 
   async handlePaymentFailure(paymentIntentId: string) {
     try {
+      this.logger.log('❌ ===== MANEJANDO FALLO DE PAGO =====');
+      this.logger.log(`📋 Payment Intent ID: ${paymentIntentId}`);
+
       // Find payment by payment intent ID
       const payment = await this.paymentRepository.findOne({
         where: { stripePaymentIntentId: paymentIntentId },
@@ -137,24 +140,35 @@ export class PaymentOrderService {
       });
 
       if (!payment) {
-        this.logger.warn(`No payment found for payment intent: ${paymentIntentId}`);
+        this.logger.warn(`⚠️ No payment found for payment intent: ${paymentIntentId}`);
         return;
       }
 
+      this.logger.log(`✅ Pago encontrado: ID ${payment.id}, Order ID: ${payment.orderId}`);
+
       // Update payment status
+      this.logger.log('🔄 Actualizando estado del pago a FAILED...');
       await this.paymentRepository.update(payment.id, {
         status: PaymentStatus.FAILED,
         processedAt: new Date(),
       });
+      this.logger.log('✅ Estado del pago actualizado a FAILED');
 
       // Update order status
+      this.logger.log('🔄 Actualizando estado de la orden a FAILED...');
       await this.ordersRepository.update(payment.orderId, {
         status: OrderStatus.FAILED,
       });
+      this.logger.log('✅ Estado de la orden actualizado a FAILED');
 
-      this.logger.log(`Order ${payment.orderId} marked as payment failed`);
+      // NOTA: No necesitamos restaurar stock porque nunca se descuenta hasta que el pago sea exitoso
+      this.logger.log('ℹ️ No es necesario restaurar stock - nunca se descuento');
+
+      this.logger.log(`✅ ===== FALLO DE PAGO MANEJADO EXITOSAMENTE =====`);
+      this.logger.log(`📋 Order ${payment.orderId} marcada como fallida`);
     } catch (error) {
-      this.logger.error(`Error handling payment failure: ${error.message}`);
+      this.logger.error(`❌ Error handling payment failure: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
       throw error;
     }
   }
@@ -201,6 +215,8 @@ export class PaymentOrderService {
 
   /**
    * Update product stock after successful payment
+   * IMPORTANTE: Este es el ÚNICO lugar donde se debe descontar el stock
+   * para evitar descuentos dobles. El stock NO se descuenta durante la creación de la orden.
    */
   private async updateProductStock(orderId: string): Promise<void> {
     try {

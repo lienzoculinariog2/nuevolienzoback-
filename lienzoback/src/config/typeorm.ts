@@ -37,8 +37,9 @@ const config = {
   port: isProduction ? undefined : process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
-  // Sincronización habilitada temporalmente en producción para crear tablas
-  synchronize: isProduction ? true : false,
+  // Sincronización habilitada en desarrollo para facilitar el setup
+  // En producción se mantiene true temporalmente para crear tablas
+  synchronize: true,
   logging: !isProduction, // Solo logging en desarrollo
   dropSchema: process.env.TYPEORM_DROP === 'true',
   entities: ['dist/**/*.entity.js'],

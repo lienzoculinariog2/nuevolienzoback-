@@ -106,6 +106,30 @@ export class PaymentsController {
     }
   }
 
+  @Get('order/:orderId/items')
+  @ApiOperation({ summary: 'Get order items information' })
+  @ApiResponse({ status: 200, description: 'Order items retrieved successfully' })
+  async getOrderItems(@Param('orderId') orderId: string) {
+    try {
+      const items = await this.paymentsService.getOrderItems(orderId);
+      return {
+        orderId,
+        items,
+        itemCount: items.length,
+      };
+    } catch (error) {
+      this.logger.error(`Error getting order items for order ${orderId}: ${error.message}`);
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Error getting order items',
+          message: error.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   // 🚫 DESHABILITADO: Historial de pagos (no necesario para flujo de compra)
   // @Get('order/:orderId/payment-history')
   // @ApiOperation({ summary: 'Get complete payment history for a specific order' })
