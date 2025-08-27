@@ -231,7 +231,7 @@ export class PaymentManagementService {
   private async handlePaymentCanceled(payment: Payment): Promise<void> {
     // Update order status
     await this.ordersRepository.update(payment.orderId, {
-      status: OrderStatus.CANCELED,
+      status: OrderStatus.CANCELLED,
     });
 
     this.logger.log(`Order ${payment.orderId} marked as canceled`);
