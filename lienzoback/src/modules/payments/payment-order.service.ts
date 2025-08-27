@@ -12,9 +12,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaymentOrderService {
-  handlePaymentFailure(id: string) {
-    throw new Error('Method not implemented.');
-  }
   private readonly logger = new Logger(PaymentOrderService.name);
 
   constructor(
