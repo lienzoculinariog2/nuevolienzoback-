@@ -8,6 +8,7 @@ import { Products } from '../products/entities/product.entity';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentIntentDto, CreatePaymentForOrderDto } from './dto/create-payment-intent.dto';
 import { CartService } from '../cart/cart.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaymentOrderService {
@@ -29,6 +30,7 @@ export class PaymentOrderService {
     private readonly paymentsService: PaymentsService,
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createPaymentForOrder(orderId: string, createPaymentForOrderDto: CreatePaymentForOrderDto) {
@@ -114,25 +116,40 @@ export class PaymentOrderService {
       await this.updateProductStock(payment.orderId);
       this.logger.log('✅ Stock de productos actualizado');
 
-      // Clear the user's cart after successful payment
+      // Clear and remove the user's cart after successful payment
       try {
-        this.logger.log(`🔄 Limpiando carrito para usuario: ${payment.order.userId}`);
+        this.logger.log(`🔄 Limpiando y eliminando carrito para usuario: ${payment.order.userId}`);
+        // Llama al servicio del carrito para eliminarlo
         await this.cartService.clearCart(payment.order.userId);
         this.logger.log(
-          `✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`,
+          `✅ Carrito limpiado y eliminado para usuario ${payment.order.userId} después del pago exitoso`,
         );
       } catch (cartError) {
         this.logger.error(
-          `❌ ERROR CRÍTICO: Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`,
+          `❌ ERROR CRÍTICO: Failed to clear and remove cart for user ${payment.order.userId}: ${cartError.message}`,
         );
         this.logger.error(`❌ Error stack: ${cartError.stack}`);
-        // Don't throw error here as the payment was successful, but log it as error
-        // TODO: Implement retry mechanism or manual cart clearing
+        // No lanzar el error aquí para no afectar el proceso, pero registrarlo
+      }
+
+      // Send purchase confirmation email
+      try {
+        this.logger.log(
+          `🔄 Enviando correo de confirmación de compra a: ${payment.order.user.email}`,
+        );
+        await this.notificationsService.sendPurchaseConfirmation(payment.order);
+        this.logger.log(
+          `✅ Correo de confirmación de compra enviado a ${payment.order.user.email}`,
+        );
+      } catch (emailError) {
+        this.logger.error(
+          `❌ ERROR al enviar correo de confirmación de compra a ${payment.order.user.email}: ${emailError.message}`,
+        );
       }
 
       this.logger.log(`✅ ===== PAGO EXITOSO COMPLETADO =====`);
       this.logger.log(
-        `📋 Order ${payment.orderId} marcada como pagada, stock actualizado y carrito limpiado`,
+        `📋 Orden ${payment.orderId} marcada como pagada, stock actualizado, carrito eliminado y correo de confirmación enviado`,
       );
     } catch (error) {
       this.logger.error(`❌ Error handling payment success: ${error.message}`);

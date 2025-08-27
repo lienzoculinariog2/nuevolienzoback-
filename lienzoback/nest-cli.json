@@ -1,3 +1,4 @@
+
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
@@ -6,8 +7,8 @@
     "deleteOutDir": true,
     "assets": [
       {
-        "include": "**/templates/*",
-        "outDir": "dist/modules/notificacions",
+        "include": "modules/notifications/templates/*.hbs",
+        "outDir": "dist/modules/notifications/templates",
         "watchAssets": true
       }
     ],

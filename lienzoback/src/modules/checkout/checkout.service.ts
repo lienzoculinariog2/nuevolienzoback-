@@ -18,8 +18,6 @@ export class CheckoutService {
   constructor(
     @InjectRepository(Cart)
     private cartRepository: Repository<Cart>,
-    @InjectRepository(CartItem)
-    private cartItemRepository: Repository<CartItem>,
     @InjectRepository(Users)
     private usersRepository: Repository<Users>,
     @InjectRepository(Orders)
@@ -30,9 +28,6 @@ export class CheckoutService {
     private productsRepository: Repository<Products>,
     @InjectRepository(DiscountCodesUsed)
     private discountCodesUsedRepository: Repository<DiscountCodesUsed>,
-    @InjectRepository(DiscountCodes)
-    private discountCodesRepository: Repository<DiscountCodes>,
-    private readonly cartService: CartService,
     private readonly discountCodesService: DiscountCodesService,
     private readonly dataSource: DataSource,
   ) {}
@@ -103,13 +98,7 @@ export class CheckoutService {
       userId,
     );
 
-    const order = await this.createOrder(
-      userId,
-      orderItems,
-      checkoutDto.shippingAddress,
-      finalTotal,
-      discountCode,
-    );
+    const order = await this.createOrder(userId, orderItems, finalTotal, discountCode);
 
     //await this.clearCart(cart.id);
 
@@ -197,7 +186,6 @@ export class CheckoutService {
   private async createOrder(
     userId: string,
     orderItems: any[],
-    shippingAddress: string,
     finalTotal: number,
     discountCode?: DiscountCodes,
   ): Promise<Orders> {
@@ -205,7 +193,6 @@ export class CheckoutService {
       const order = this.ordersRepository.create({
         userId: userId,
         status: OrderStatus.PENDING,
-        shippingAddress,
         date: new Date(),
         totalAmount: finalTotal,
         isPaid: false,

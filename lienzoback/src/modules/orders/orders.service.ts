@@ -95,9 +95,9 @@ export class OrdersService {
         throw new NotFoundException(`Order with ID ${orderId} not found`);
       }
       if (
-        order.statusOrder === OrderStatus.SHIPPED ||
-        order.statusOrder === OrderStatus.DELIVERED ||
-        order.statusOrder === OrderStatus.CANCELED
+        order.status === OrderStatus.SHIPPED ||
+        order.status === OrderStatus.DELIVERED ||
+        order.status === OrderStatus.CANCELED
       ) {
         throw new BadRequestException(
           'Cannot cancel an order that is already shipped, delivered, or canceled.',
@@ -111,7 +111,7 @@ export class OrdersService {
           await manager.save(Products, product);
         }
       }
-      order.statusOrder = OrderStatus.CANCELED;
+      order.status = OrderStatus.CANCELED;
       const canceledOrder = await manager.save(Orders, order);
       return canceledOrder;
     });
@@ -127,18 +127,18 @@ export class OrdersService {
     }
 
     if (newStatus === OrderStatus.SHIPPED) {
-      if (order.statusOrder !== OrderStatus.PENDING) {
+      if (order.status !== OrderStatus.PENDING) {
         throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
       }
     } else if (newStatus === OrderStatus.DELIVERED) {
-      if (order.statusOrder !== OrderStatus.SHIPPED) {
+      if (order.status !== OrderStatus.SHIPPED) {
         throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
       }
     } else if (newStatus === OrderStatus.CANCELED) {
       throw new BadRequestException('Use cancel button, which handles stock replenishment.');
     }
 
-    order.statusOrder = newStatus;
+    order.status = newStatus;
     const updatedOrder = await this.ordersRepository.save(order);
 
     return updatedOrder;

@@ -47,14 +47,19 @@ export class NotificationsService {
       });
       this.logger.log(`Purchase confirmation email sent to ${order.user.email}`);
     } catch (error) {
-      this.logger.error(`Error sending purchase confirmation email to ${order.user.email}:`, error.message);
+      this.logger.error(
+        `Error sending purchase confirmation email to ${order.user.email}:`,
+        error.message,
+      );
       // No lanzar el error para no afectar el proceso de compra
     }
   }
 
-  @Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
-
-  //@Cron('*/10 * * * *') // cada minutos
+  // @Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
+  @Cron('10 11 * * 3', {
+    name: 'weekly-newsletter',
+    timeZone: 'America/Buenos_Aires', // Mantener esta línea para la zona horaria
+  })
   async handleWeeklyNewsletter() {
     this.logger.log('Executing Cron Job: Sending weekly newsletter');
     try {
