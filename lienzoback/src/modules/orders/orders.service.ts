@@ -41,120 +41,11 @@ export class OrdersService {
     private dataSource: DataSource,
   ) {}
 
-  async createOrder(userId: string, createOrderDto: CreateOrderDto): Promise<Orders> {
-    return this.dataSource.transaction(async (manager: EntityManager) => {
-      const user = await manager.findOne(Users, { where: { id: userId } });
-      if (!user) {
-        throw new NotFoundException(`User with id ${userId} not found`);
-      }
-
-      let finalTotal = 0;
-      const items = createOrderDto.items;
-      let discount: DiscountCodes | null = null;
-
-      if (createOrderDto.discountCode) {
-        discount = await this.discountCodesService.findOne(createOrderDto.discountCode);
-        if (discount && discount.isSingleUsePerUser) {
-          const usedCode = await manager.findOne(DiscountCodesUsed, {
-            where: {
-              discountCode: { id: discount.id },
-              user: { id: userId },
-            },
-          });
-          if (usedCode) {
-            throw new BadRequestException('This discount code has already been used.');
-          }
-        }
-      }
-      const productValidations = new Map<string, Products>();
-      for (const itemDto of items) {
-        const product = await manager.findOneBy(Products, { id: itemDto.productId });
-        if (!product) {
-          throw new NotFoundException(`Product with id ${itemDto.productId} not found`);
-        }
-        if (product.stock === 0) {
-          throw new BadRequestException(`Product ${product.name} run out stock`);
-        }
-        if (product.stock < itemDto.quantity) {
-          throw new BadRequestException(`Insufficient stock for product ${product.name}`);
-        }
-
-        productValidations.set(itemDto.productId, product);
-        finalTotal += itemDto.quantity * product.price;
-      }
-      if (discount) {
-        finalTotal = finalTotal - finalTotal * (discount.percentage / 100);
-      }
-
-      const newOrder = manager.create(Orders, {
-        user: user,
-        totalAmount: finalTotal,
-        status: OrderStatus.PENDING,
-        shippingAddress: createOrderDto.shippingAddress,
-      });
-
-      await manager.save(Orders, newOrder);
-
-      if (discount) {
-        const discountUsed = new DiscountCodesUsed();
-        discountUsed.order = newOrder;
-        discountUsed.discountCode = discount;
-        discountUsed.usedAt = new Date();
-        discountUsed.user = user;
-
-        await manager.save(DiscountCodesUsed, discountUsed);
-      }
-
-      for (const itemDto of items) {
-        const product = productValidations.get(itemDto.productId);
-
-        if (!product) {
-          throw new NotFoundException(`Product with id ${itemDto.productId} not found`);
-        }
-
-        const orderDetail = new OrderDetail();
-        orderDetail.order = newOrder;
-        orderDetail.product = product;
-        orderDetail.quantity = itemDto.quantity;
-        orderDetail.unitPrice = product.price;
-
-        await manager.save(OrderDetail, orderDetail);
-
-        product.stock -= itemDto.quantity;
-        await manager.save(Products, product);
-      }
-
-      const userCart = await manager.findOne(Cart, {
-        where: { user: { id: userId }, isActive: true },
-        relations: ['items'],
-      });
-
-      if (userCart) {
-        if (userCart.items && userCart.items.length > 0) {
-          await manager.remove(CartItem, userCart.items);
-        }
-
-        await manager.remove(Cart, userCart);
-      }
-
-      const finalOrder = await manager.findOne(Orders, {
-        where: { id: newOrder.id },
-        relations: ['orderDetails', 'orderDetails.product', 'user'],
-      });
-
-      if (!finalOrder) {
-        throw new InternalServerErrorException('Order not found after creation.');
-      }
-
-      return finalOrder;
-    });
-  }
-
   async getAllOrders(status?: OrderStatus): Promise<Orders[]> {
     const findOptions: any = {
       relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
       order: {
-        createdAt: 'DESC',
+        date: 'DESC',
       },
     };
     if (status) {
@@ -168,7 +59,7 @@ export class OrdersService {
       where: { user: { id: userId } },
       relations: ['user', 'orderDetails', 'orderDetails.product', 'discountCodesUsed'],
       order: {
-        id: 'DESC',
+        date: 'DESC',
       },
     });
   }
@@ -204,11 +95,12 @@ export class OrdersService {
         throw new NotFoundException(`Order with ID ${orderId} not found`);
       }
       if (
-        order.status === OrderStatus.COMPLETED ||
-        order.status === OrderStatus.CANCELLED
+        order.statusOrder === OrderStatus.SHIPPED ||
+        order.statusOrder === OrderStatus.DELIVERED ||
+        order.statusOrder === OrderStatus.CANCELED
       ) {
         throw new BadRequestException(
-          'Cannot cancel an order that is already completed or canceled.',
+          'Cannot cancel an order that is already shipped, delivered, or canceled.',
         );
       }
 
@@ -219,7 +111,7 @@ export class OrdersService {
           await manager.save(Products, product);
         }
       }
-      order.status = OrderStatus.CANCELLED;
+      order.statusOrder = OrderStatus.CANCELED;
       const canceledOrder = await manager.save(Orders, order);
       return canceledOrder;
     });
@@ -234,19 +126,19 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    if (newStatus === OrderStatus.PROCESSING) {
-      if (order.status !== OrderStatus.PENDING) {
-        throw new BadRequestException('Order must be in PENDING status to be PROCESSING.');
+    if (newStatus === OrderStatus.SHIPPED) {
+      if (order.statusOrder !== OrderStatus.PENDING) {
+        throw new BadRequestException('Order must be in PENDING status to be SHIPPED.');
       }
-    } else if (newStatus === OrderStatus.COMPLETED) {
-      if (order.status !== OrderStatus.PROCESSING && order.status !== OrderStatus.PENDING) {
-        throw new BadRequestException('Order must be in PENDING or PROCESSING status to be COMPLETED.');
+    } else if (newStatus === OrderStatus.DELIVERED) {
+      if (order.statusOrder !== OrderStatus.SHIPPED) {
+        throw new BadRequestException('Order must be in SHIPPED status to be DELIVERED.');
       }
-    } else if (newStatus === OrderStatus.CANCELLED) {
+    } else if (newStatus === OrderStatus.CANCELED) {
       throw new BadRequestException('Use cancel button, which handles stock replenishment.');
     }
 
-    order.status = newStatus;
+    order.statusOrder = newStatus;
     const updatedOrder = await this.ordersRepository.save(order);
 
     return updatedOrder;

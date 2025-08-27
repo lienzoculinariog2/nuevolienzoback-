@@ -11,6 +11,9 @@ import { CartService } from '../cart/cart.service';
 
 @Injectable()
 export class PaymentOrderService {
+  handlePaymentFailure(id: string) {
+    throw new Error('Method not implemented.');
+  }
   private readonly logger = new Logger(PaymentOrderService.name);
 
   constructor(
@@ -43,8 +46,9 @@ export class PaymentOrderService {
         description: createPaymentForOrderDto.description,
         idempotencyKey: createPaymentForOrderDto.idempotencyKey,
       };
-      
-      const paymentResponse = await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
+
+      const paymentResponse =
+        await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
 
       // Create payment record
       const payment = this.paymentRepository.create({
@@ -59,7 +63,9 @@ export class PaymentOrderService {
 
       await this.paymentRepository.save(payment);
 
-      this.logger.log(`Payment intent created for order ${orderId}: ${paymentResponse.paymentIntentId}`);
+      this.logger.log(
+        `Payment intent created for order ${orderId}: ${paymentResponse.paymentIntentId}`,
+      );
 
       return paymentResponse;
     } catch (error) {
@@ -72,7 +78,7 @@ export class PaymentOrderService {
     try {
       this.logger.log(`🔍 ===== MANEJANDO PAGO EXITOSO =====`);
       this.logger.log(`📋 Payment Intent ID: ${paymentIntentId}`);
-      
+
       // Find payment by payment intent ID
       this.logger.log('🔍 Buscando pago en la base de datos...');
       const payment = await this.paymentRepository.findOne({
@@ -98,7 +104,8 @@ export class PaymentOrderService {
       // Update order status
       this.logger.log('🔄 Actualizando estado de la orden...');
       await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.COMPLETED,
+        status: OrderStatus.PENDING,
+        isPaid: true,
       });
       this.logger.log('✅ Estado de la orden actualizado');
 
@@ -111,50 +118,25 @@ export class PaymentOrderService {
       try {
         this.logger.log(`🔄 Limpiando carrito para usuario: ${payment.order.userId}`);
         await this.cartService.clearCart(payment.order.userId);
-        this.logger.log(`✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`);
+        this.logger.log(
+          `✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`,
+        );
       } catch (cartError) {
-        this.logger.error(`❌ ERROR CRÍTICO: Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
+        this.logger.error(
+          `❌ ERROR CRÍTICO: Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`,
+        );
         this.logger.error(`❌ Error stack: ${cartError.stack}`);
         // Don't throw error here as the payment was successful, but log it as error
         // TODO: Implement retry mechanism or manual cart clearing
       }
 
       this.logger.log(`✅ ===== PAGO EXITOSO COMPLETADO =====`);
-      this.logger.log(`📋 Order ${payment.orderId} marcada como pagada, stock actualizado y carrito limpiado`);
+      this.logger.log(
+        `📋 Order ${payment.orderId} marcada como pagada, stock actualizado y carrito limpiado`,
+      );
     } catch (error) {
       this.logger.error(`❌ Error handling payment success: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
-      throw error;
-    }
-  }
-
-  async handlePaymentFailure(paymentIntentId: string) {
-    try {
-      // Find payment by payment intent ID
-      const payment = await this.paymentRepository.findOne({
-        where: { stripePaymentIntentId: paymentIntentId },
-        relations: ['order'],
-      });
-
-      if (!payment) {
-        this.logger.warn(`No payment found for payment intent: ${paymentIntentId}`);
-        return;
-      }
-
-      // Update payment status
-      await this.paymentRepository.update(payment.id, {
-        status: PaymentStatus.FAILED,
-        processedAt: new Date(),
-      });
-
-      // Update order status
-      await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.FAILED,
-      });
-
-      this.logger.log(`Order ${payment.orderId} marked as payment failed`);
-    } catch (error) {
-      this.logger.error(`Error handling payment failure: ${error.message}`);
       throw error;
     }
   }
@@ -181,7 +163,9 @@ export class PaymentOrderService {
       }
 
       // Get payment intent details from Stripe
-      const paymentIntent = await this.paymentsService.getPaymentIntent(payment.stripePaymentIntentId);
+      const paymentIntent = await this.paymentsService.getPaymentIntent(
+        payment.stripePaymentIntentId,
+      );
 
       return {
         orderId,
@@ -217,13 +201,17 @@ export class PaymentOrderService {
       this.logger.log(`📦 Encontrados ${orderDetails.length} items en la orden`);
 
       if (orderDetails.length === 0) {
-        this.logger.warn(`⚠️ ADVERTENCIA: No se encontraron order details para la orden ${orderId}`);
+        this.logger.warn(
+          `⚠️ ADVERTENCIA: No se encontraron order details para la orden ${orderId}`,
+        );
         return;
       }
 
       for (const detail of orderDetails) {
-        this.logger.log(`🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`);
-        
+        this.logger.log(
+          `🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`,
+        );
+
         if (!detail.product) {
           this.logger.error(`❌ ERROR: Item sin producto asociado en order detail ${detail.id}`);
           continue;
@@ -238,27 +226,31 @@ export class PaymentOrderService {
         this.logger.log(`📦 Producto: ${product.name}`);
         this.logger.log(`📊 Stock actual: ${product.stock}`);
         this.logger.log(`📉 Cantidad a descontar: ${detail.quantity}`);
-        
+
         // Validate stock before decreasing
         if (product.stock < detail.quantity) {
-          this.logger.error(`❌ ERROR: Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`);
+          this.logger.error(
+            `❌ ERROR: Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`,
+          );
           continue;
         }
-        
+
         // Decrease stock
         const newStock = product.stock - detail.quantity;
         product.stock = newStock;
-        
+
         this.logger.log(`📊 Nuevo stock: ${newStock}`);
-        
+
         // Deactivate product if stock reaches 0
         if (product.stock <= 0) {
           product.isActive = false;
           this.logger.log(`⚠️ Producto ${product.name} desactivado por stock agotado`);
         }
-        
+
         await this.productsRepository.save(product);
-        this.logger.log(`✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`);
+        this.logger.log(
+          `✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`,
+        );
       }
 
       this.logger.log('✅ ===== STOCK DE PRODUCTOS ACTUALIZADO EXITOSAMENTE =====');

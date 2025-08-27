@@ -141,7 +141,7 @@ export class CartService {
       cart.items.push(cartItem);
     }
 
-    await this.cartItemRepository.save(cartItem);
+    await this.cartRepository.save(cart);
 
     const updatedCart = await this.cartRepository.findOne({
       where: { id: cart.id },
@@ -329,39 +329,38 @@ export class CartService {
   }
 
   async clearCart(userId: string): Promise<void> {
-    console.log('🛒 ===== LIMPIANDO CARRITO =====');
-    console.log(`👤 User ID: ${userId}`);
-    
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items', 'items.product'],
     });
-    
+
     if (!cart) {
       console.log(`⚠️ Cart for user with id ${userId} not found`);
       this.logger.warn(`Cart for user with id ${userId} not found`);
       throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
-    
+
     console.log(`✅ Carrito encontrado: ID ${cart.id}`);
     console.log(`📦 Items en carrito: ${cart.items?.length || 0}`);
-    
+
     if (cart.items && cart.items.length > 0) {
       console.log(`🔄 Eliminando ${cart.items.length} items del carrito...`);
       for (const item of cart.items) {
-        console.log(`🗑️ Eliminando item: ${item.product?.name || 'Producto sin nombre'} (Qty: ${item.quantity})`);
+        console.log(
+          `🗑️ Eliminando item: ${item.product?.name || 'Producto sin nombre'} (Qty: ${item.quantity})`,
+        );
       }
       await this.cartItemRepository.remove(cart.items);
       console.log(`✅ Items eliminados del carrito`);
     } else {
       console.log(`ℹ️ Carrito ya está vacío`);
     }
-    
+
     console.log(`🔄 Guardando carrito vacío...`);
     // NO desactivamos el carrito, solo lo dejamos vacío
     await this.cartRepository.remove(cart);
     console.log(`✅ Carrito guardado (vacío pero activo)`);
-    
+
     console.log('✅ ===== CARRITO LIMPIADO EXITOSAMENTE =====');
   }
 
@@ -389,7 +388,7 @@ export class CartService {
     let totalItems = 0;
 
     // Filtrar items que tienen productos válidos
-    const validItems = cart.items.filter(item => item.product !== null);
+    const validItems = cart.items.filter((item) => item.product !== null);
 
     const itemsResponse = validItems.map((item) => {
       const totalItemPrice = item.quantity * item.product.price;

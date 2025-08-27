@@ -91,9 +91,9 @@ describe('Payment Security Tests', () => {
         idempotencyKey: 'unique-key-123',
       });
 
-      await expect(
-        paymentsService.createPaymentIntent(createPaymentDto)
-      ).rejects.toThrow(ConflictException);
+      await expect(paymentsService.createPaymentIntent(createPaymentDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should allow payments with different idempotency keys', async () => {
@@ -108,7 +108,7 @@ describe('Payment Security Tests', () => {
       // Mock order calculation
       jest.spyOn(paymentCalculationService, 'getOrderSummary').mockResolvedValue({
         orderId: 'order-123',
-        amount: 15.00,
+        amount: 15.0,
         currency: 'usd',
         description: 'Test order',
         items: [],
@@ -129,7 +129,7 @@ describe('Payment Security Tests', () => {
       jest.spyOn(paymentManagementService, 'createPaymentRecord').mockResolvedValue({
         id: 'payment-123',
         orderId: 'order-123',
-        amount: 15.00,
+        amount: 15.0,
         status: 'pending',
       } as any);
 
@@ -150,7 +150,7 @@ describe('Payment Security Tests', () => {
       // Mock order calculation with server-side amount
       jest.spyOn(paymentCalculationService, 'getOrderSummary').mockResolvedValue({
         orderId: 'order-123',
-        amount: 25.00, // Server calculated amount
+        amount: 25.0, // Server calculated amount
         currency: 'usd',
         description: 'Test order',
         items: [
@@ -158,8 +158,8 @@ describe('Payment Security Tests', () => {
             productId: 'product-1',
             productName: 'Test Product',
             quantity: 2,
-            unitPrice: 12.50,
-            totalPrice: 25.00,
+            unitPrice: 12.5,
+            totalPrice: 25.0,
           },
         ],
         customerEmail: 'test@example.com',
@@ -182,13 +182,13 @@ describe('Payment Security Tests', () => {
       jest.spyOn(paymentManagementService, 'createPaymentRecord').mockResolvedValue({
         id: 'payment-123',
         orderId: 'order-123',
-        amount: 25.00,
+        amount: 25.0,
         status: 'pending',
       } as any);
 
       const result = await paymentsService.createPaymentIntent(createPaymentDto);
 
-      expect(result.amount).toBe(25.00); // Server calculated amount
+      expect(result.amount).toBe(25.0); // Server calculated amount
       expect(result.amount).not.toBe(0); // Not client-provided amount
     });
 
@@ -207,9 +207,9 @@ describe('Payment Security Tests', () => {
         customerEmail: 'test@example.com',
       });
 
-      await expect(
-        paymentsService.createPaymentIntent(createPaymentDto)
-      ).rejects.toThrow(BadRequestException);
+      await expect(paymentsService.createPaymentIntent(createPaymentDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -222,7 +222,7 @@ describe('Payment Security Tests', () => {
       // Mock order calculation
       jest.spyOn(paymentCalculationService, 'getOrderSummary').mockResolvedValue({
         orderId: 'order-123',
-        amount: 15.00,
+        amount: 15.0,
         currency: 'usd',
         description: 'Test order',
         items: [],
@@ -243,11 +243,12 @@ describe('Payment Security Tests', () => {
       } as any);
 
       // Mock payment record creation
-      const createPaymentRecordSpy = jest.spyOn(paymentManagementService, 'createPaymentRecord')
+      const createPaymentRecordSpy = jest
+        .spyOn(paymentManagementService, 'createPaymentRecord')
         .mockResolvedValue({
           id: 'payment-123',
           orderId: 'order-123',
-          amount: 15.00,
+          amount: 15.0,
           status: 'pending',
         } as any);
 
@@ -258,7 +259,7 @@ describe('Payment Security Tests', () => {
         expect.objectContaining({
           id: 'pi_test_123',
           amount: 1500,
-        })
+        }),
       );
     });
   });
@@ -269,14 +270,13 @@ describe('Payment Security Tests', () => {
       const signature = 't=1234567890,v1=invalid_signature';
 
       // Mock Stripe webhook verification to fail
-      jest.spyOn(paymentsService['stripe'].webhooks, 'constructEvent')
-        .mockImplementation(() => {
-          throw new Error('Invalid signature');
-        });
+      jest.spyOn(paymentsService['stripe'].webhooks, 'constructEvent').mockImplementation(() => {
+        throw new Error('Invalid signature');
+      });
 
-      await expect(
-        paymentsService.handleWebhook(payload, signature)
-      ).rejects.toThrow('Invalid signature');
+      await expect(paymentsService.handleWebhook(payload, signature)).rejects.toThrow(
+        'Invalid signature',
+      );
     });
   });
 });
