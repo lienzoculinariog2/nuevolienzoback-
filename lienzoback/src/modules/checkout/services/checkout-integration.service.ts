@@ -120,6 +120,135 @@ export class CheckoutIntegrationService {
   }
 
   /**
+   * Diagnosticar carrito del usuario (solo lectura, no modifica datos)
+   */
+  async diagnoseCart(userId: string) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'user'],
+    });
+
+    if (!cart) {
+      return {
+        status: 'no_cart',
+        message: 'El usuario no tiene carrito',
+        issues: []
+      };
+    }
+
+    if (cart.items.length === 0) {
+      return {
+        status: 'empty_cart',
+        message: 'El carrito está vacío',
+        issues: []
+      };
+    }
+
+    const issues: string[] = [];
+    const validItems: Array<{
+      id: string;
+      productId: string;
+      productName: string;
+      quantity: number;
+      price: number;
+    }> = [];
+    const invalidItems: Array<{
+      id: string;
+      productId?: string;
+      issue: string;
+    }> = [];
+
+    for (const item of cart.items) {
+      if (!item.product || !item.product.id) {
+        issues.push(`Item del carrito ${item.id} no tiene producto asociado`);
+        invalidItems.push({
+          id: item.id,
+          issue: 'no_product'
+        });
+      } else {
+        const product = await this.productsRepository.findOneBy({ id: item.product.id });
+        if (!product) {
+          issues.push(`Producto ${item.product.id} no encontrado en la base de datos`);
+          invalidItems.push({
+            id: item.id,
+            productId: item.product.id,
+            issue: 'product_not_found'
+          });
+        } else {
+          validItems.push({
+            id: item.id,
+            productId: item.product.id,
+            productName: product.name,
+            quantity: item.quantity,
+            price: product.price
+          });
+        }
+      }
+    }
+
+    return {
+      status: issues.length > 0 ? 'has_issues' : 'healthy',
+      message: issues.length > 0 ? 'El carrito tiene problemas' : 'El carrito está saludable',
+      totalItems: cart.items.length,
+      validItemsCount: validItems.length,
+      invalidItemsCount: invalidItems.length,
+      issues,
+      validItems,
+      invalidItems
+    };
+  }
+
+  /**
+   * Validar carrito y calcular totales (sin crear orden)
+   */
+  async validateCheckout(userId: string, checkoutDto: CheckoutDto) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw new BadRequestException('El carrito está vacío');
+    }
+
+    // Validar stock y calcular totales
+    const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+      await this.validateCartAndCalculateTotals(cart, checkoutDto);
+
+    let savings = 0;
+    let discountPercentage: number | undefined = undefined;
+
+    // Calcular ahorros si hay descuento
+    if (checkoutDto.discountCode) {
+      const discount = await this.discountCodesService.findOne(checkoutDto.discountCode);
+      if (discount) {
+        savings = subTotal * (discount.percentage / 100);
+        discountPercentage = discount.percentage;
+      }
+    }
+
+    return {
+      message: 'Validación de checkout exitosa',
+      subTotal: subTotal,
+      savings: savings,
+      discountPercentage: discountPercentage ? `${discountPercentage}%` : undefined,
+      finalTotal: finalTotal,
+      orderItems: orderItems,
+      appliedDiscountCode,
+    };
+  }
+
+  /**
    * Validar carrito y calcular totales
    */
   private async validateCartAndCalculateTotals(

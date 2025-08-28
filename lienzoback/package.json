@@ -28,7 +28,15 @@
     "schema:drop": "npm run typeorm -- schema:drop -d src/config/typeorm.ts",
     "migrate": "node run-migrations.js",
     "migrate:render": "node render-migrations.js",
-    "clean-tables": "node clean-duplicate-tables.js"
+    "clean-tables": "node clean-duplicate-tables.js",
+    "debug:master": "node debug-master.js",
+    "debug:env": "node debug-environment-config.js",
+    "debug:system": "node debug-complete-system.js",
+    "debug:modules": "node debug-problematic-modules.js",
+    "debug:inconsistencies": "node debug-inconsistencies.js",
+    "debug:checkout": "node debug-checkout-issues.js",
+    "test:webhook": "node test-webhook-success.js",
+    "check:webhook": "node check-webhook-config.js"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.9.0",
