@@ -70,7 +70,7 @@ export class PaymentCalculationService {
       // Validate that the unit price in order detail matches current product price
       if (detail.unitPrice !== product.price) {
         throw new BadRequestException(
-          `Price mismatch for product ${product.id}. Expected: ${product.price}, Got: ${detail.unitPrice}`
+          `Price mismatch for product ${product.id}. Expected: ${product.price}, Got: ${detail.unitPrice}`,
         );
       }
 
@@ -97,7 +97,7 @@ export class PaymentCalculationService {
     // Validate total matches order total
     if (Math.abs(total - order.totalAmount) > 0.01) {
       throw new BadRequestException(
-        `Total mismatch. Calculated: ${total}, Order total: ${order.totalAmount}`
+        `Total mismatch. Calculated: ${total}, Order total: ${order.totalAmount}`,
       );
     }
 

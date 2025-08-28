@@ -42,7 +42,9 @@ export class PaymentsService {
         console.log('🔍 Verificando idempotencia...');
         const existingPayment = await this.checkIdempotency(idempotencyKey, orderId);
         if (existingPayment) {
-          console.log(`⚠️ Pago duplicado detectado para orden ${orderId} con key ${idempotencyKey}`);
+          console.log(
+            `⚠️ Pago duplicado detectado para orden ${orderId} con key ${idempotencyKey}`,
+          );
           this.logger.warn(
             `Duplicate payment attempt detected for order ${orderId} with key ${idempotencyKey}`,
           );
@@ -54,7 +56,9 @@ export class PaymentsService {
       // 🛡️ SECURITY: Calculate amount server-side, don't trust client
       console.log('💰 Calculando resumen de la orden...');
       const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
-      console.log(`📊 Order Summary: Amount: $${orderSummary.amount}, Currency: ${orderSummary.currency}`);
+      console.log(
+        `📊 Order Summary: Amount: $${orderSummary.amount}, Currency: ${orderSummary.currency}`,
+      );
 
       // Validate that order is not already paid
       if (orderSummary.amount <= 0) {
@@ -68,11 +72,14 @@ export class PaymentsService {
         currency: orderSummary.currency,
         metadata: {
           orderId,
-          items: JSON.stringify(orderSummary.items),
+          itemCount: orderSummary.items.length.toString(),
+          totalAmount: orderSummary.amount.toString(),
           ...(idempotencyKey && { idempotencyKey }),
         },
         description: description || orderSummary.description,
       };
+
+      console.log('📊 Metadata que se enviará a Stripe:', paymentIntentParams.metadata);
 
       // Add customer email if provided
       if (customerEmail) {
@@ -201,6 +208,19 @@ export class PaymentsService {
     } catch (error) {
       this.logger.error(`Error checking idempotency: ${error.message}`);
       return false;
+    }
+  }
+
+  /**
+   * Get order items information from database (alternative to metadata)
+   */
+  async getOrderItems(orderId: string): Promise<any[]> {
+    try {
+      const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
+      return orderSummary.items;
+    } catch (error) {
+      this.logger.error(`Error getting order items: ${error.message}`);
+      throw error;
     }
   }
 }

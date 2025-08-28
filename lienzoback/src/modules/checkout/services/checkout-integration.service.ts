@@ -73,7 +73,7 @@ export class CheckoutIntegrationService {
       }
 
       // 3. Validar stock y calcular totales
-      const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+      const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
         await this.validateCartAndCalculateTotals(cart, checkoutDto);
 
       // 4. Validar código de descuento si se proporciona
@@ -83,12 +83,19 @@ export class CheckoutIntegrationService {
       }
 
       // 5. Crear la orden
-      const order = await this.createOrder(userId, orderItems, subTotal, finalTotal, checkoutDto.shippingAddress, discountCode);
+      const order = await this.createOrder(
+        userId,
+        orderItems,
+        subTotal,
+        finalTotal,
+        checkoutDto.shippingAddress,
+        discountCode,
+      );
 
-      // 6. Limpiar carrito después de crear la orden
-      await this.clearCart(cart.id);
+      // NOTA: El carrito se limpia cuando el pago sea exitoso, no aquí
+      // para evitar problemas si el pago falla
 
-      // 7. Crear payment intent
+      // 6. Crear payment intent
       const paymentIntentDto: CreatePaymentIntentDto = {
         orderId: order.id,
         customerEmail: user.email,
@@ -97,14 +104,15 @@ export class CheckoutIntegrationService {
 
       const paymentIntent = await this.paymentsService.createPaymentIntent(paymentIntentDto);
 
-      this.logger.log(`Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`);
+      this.logger.log(
+        `Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`,
+      );
 
       return {
         orderId: order.id,
         paymentIntent,
         message: 'Checkout procesado exitosamente. Procede con el pago.',
       };
-
     } catch (error) {
       this.logger.error(`Error en checkout completo: ${error.message}`);
       throw error;
@@ -138,7 +146,9 @@ export class CheckoutIntegrationService {
       }
 
       if (product.stock < item.quantity) {
-        throw new BadRequestException(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`);
+        throw new BadRequestException(
+          `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`,
+        );
       }
 
       const itemTotal = item.quantity * product.price;
@@ -222,25 +232,19 @@ export class CheckoutIntegrationService {
       const savedOrder = await manager.save(Orders, order);
 
       // Crear detalles de la orden
-      const orderDetails = orderItems.map(item => 
+      const orderDetails = orderItems.map((item) =>
         this.orderDetailRepository.create({
           order: savedOrder,
           product: { id: item.productId },
           quantity: item.quantity,
           unitPrice: item.price,
-        })
+        }),
       );
 
       await manager.save(OrderDetail, orderDetails);
 
-      // Descontar stock de productos
-      for (const item of orderItems) {
-        const product = await manager.findOne(Products, { where: { id: item.productId } });
-        if (product) {
-          product.stock -= item.quantity;
-          await manager.save(Products, product);
-        }
-      }
+      // NOTA: El stock se descuenta cuando el pago sea exitoso, no aquí
+      // para evitar descuentos dobles. Ver payment-order.service.ts
 
       // Marcar código de descuento como usado si existe
       if (discountCode) {
@@ -255,23 +259,5 @@ export class CheckoutIntegrationService {
 
       return savedOrder;
     });
-  }
-
-  /**
-   * Limpiar carrito después del checkout
-   */
-  private async clearCart(cartId: string): Promise<void> {
-    try {
-      // Eliminar todos los items del carrito
-      await this.cartItemRepository.delete({ cart: { id: cartId } });
-      
-      // Desactivar el carrito
-      await this.cartRepository.update(cartId, { isActive: false });
-      
-      this.logger.log(`Carrito ${cartId} limpiado exitosamente`);
-    } catch (error) {
-      this.logger.error(`Error limpiando carrito ${cartId}: ${error.message}`);
-      // No lanzamos el error para no afectar el checkout
-    }
   }
 }

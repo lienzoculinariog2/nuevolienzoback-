@@ -65,27 +65,41 @@ export class AppModule implements OnModuleInit {
   async onModuleInit() {
     console.info('🔄 Iniciando aplicación...');
 
-    // Ejecutar migraciones primero
-    console.info('📦 Ejecutando migraciones...');
-    await this.migrationService.runMigrations();
+    // Ejecutar migraciones solo en producción
+    if (process.env.NODE_ENV === 'production') {
+      console.info('📦 Ejecutando migraciones...');
+      await this.migrationService.runMigrations();
+    } else {
+      console.info('🔄 Modo desarrollo: saltando migraciones (synchronize: true)');
+    }
 
     console.info('🌱 Ejecutando seeders...');
 
-    const areTablesPopulated = await this.productsService.isPopulated();
-    if (areTablesPopulated) {
-      console.log('✅ Base de datos ya poblada. Saltando seeders.');
-      return;
+    try {
+      const areTablesPopulated = await this.productsService.isPopulated();
+      if (areTablesPopulated) {
+        console.log('✅ Base de datos ya poblada. Saltando seeders.');
+        return;
+      }
+    } catch (error) {
+      console.log('⚠️ Error verificando si las tablas están pobladas:', error.message);
+      console.log('🔄 Continuando con la inicialización...');
     }
 
-    console.log('🌱 Sembrando categorías...');
-    await this.categoriesService.seedCategories();
+    try {
+      console.log('🌱 Sembrando categorías...');
+      await this.categoriesService.seedCategories();
 
-    console.log('🌱 Sembrando ingredientes...');
-    await this.ingredientsService.seedIngredients();
+      console.log('🌱 Sembrando ingredientes...');
+      await this.ingredientsService.seedIngredients();
 
-    console.log('🌱 Sembrando productos y vinculando relaciones...');
-    await this.productsService.seedProducts();
+      console.log('🌱 Sembrando productos y vinculando relaciones...');
+      await this.productsService.seedProducts();
 
-    console.log('✅ Seeders completados exitosamente.');
+      console.log('✅ Seeders completados exitosamente.');
+    } catch (error) {
+      console.error('❌ Error ejecutando seeders:', error.message);
+      console.log('🔄 Continuando sin seeders...');
+    }
   }
 }

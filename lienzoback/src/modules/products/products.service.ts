@@ -15,7 +15,6 @@ import { IngredientsService } from '../ingredients/ingredients.service';
 import { PaginatedResponse } from './dto/paginated-response.interface';
 import { v2 as cloudinary } from 'cloudinary';
 
-
 @Injectable()
 export class ProductsService {
   constructor(

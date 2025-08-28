@@ -8,7 +8,7 @@ import { PaymentOrderService } from '../payment-order.service';
 
 @Injectable()
 export class PaymentManagementService {
-  private readonly logger = new Logger(PaymentManagementService.name)
+  private readonly logger = new Logger(PaymentManagementService.name);
 
   constructor(
     @InjectRepository(Payment)
@@ -21,7 +21,10 @@ export class PaymentManagementService {
   /**
    * Create a new payment record
    */
-  async createPaymentRecord(orderId: string, stripePaymentIntent: Stripe.PaymentIntent): Promise<Payment> {
+  async createPaymentRecord(
+    orderId: string,
+    stripePaymentIntent: Stripe.PaymentIntent,
+  ): Promise<Payment> {
     const payment = new Payment();
     payment.orderId = orderId;
     payment.stripePaymentIntentId = stripePaymentIntent.id;
@@ -113,7 +116,8 @@ export class PaymentManagementService {
     const refund = this.paymentRepository.create({
       orderId: originalPayment.orderId,
       provider: PaymentProvider.STRIPE,
-      type: refundAmount >= originalPayment.amount ? PaymentType.REFUND : PaymentType.PARTIAL_REFUND,
+      type:
+        refundAmount >= originalPayment.amount ? PaymentType.REFUND : PaymentType.PARTIAL_REFUND,
       status: PaymentStatus.SUCCEEDED,
       amount: refundAmount,
       currency: originalPayment.currency,
@@ -160,7 +164,9 @@ export class PaymentManagementService {
     });
 
     if (!payment) {
-      throw new NotFoundException(`Payment with Stripe payment intent ${paymentIntentId} not found`);
+      throw new NotFoundException(
+        `Payment with Stripe payment intent ${paymentIntentId} not found`,
+      );
     }
 
     return payment;

@@ -24,7 +24,7 @@ export class Orders {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
+  @Column({ name: 'total', type: 'decimal', precision: 4, scale: 2 })
   totalAmount: number;
 
   @Column({ name: 'statusOrder', type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
@@ -57,4 +57,5 @@ export class Orders {
 
   @OneToMany(() => Payment, (payment) => payment.order)
   payments: Payment[];
+  statusOrder: OrderStatus;
 }
