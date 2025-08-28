@@ -82,6 +82,162 @@ export class PaymentsController {
     }
   }
 
+  @Get('order/:orderId/items')
+  @ApiOperation({ summary: 'Get order items information' })
+  @ApiResponse({ status: 200, description: 'Order items retrieved successfully' })
+  async getOrderItems(@Param('orderId') orderId: string) {
+    try {
+      const items = await this.paymentsService.getOrderItems(orderId);
+      return {
+        orderId,
+        items,
+        itemCount: items.length,
+      };
+    } catch (error) {
+      this.logger.error(`Error getting order items for order ${orderId}: ${error.message}`);
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Error getting order items',
+          message: error.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // 🚫 DESHABILITADO: Historial de pagos (no necesario para flujo de compra)
+  // @Get('order/:orderId/payment-history')
+  // @ApiOperation({ summary: 'Get complete payment history for a specific order' })
+  // @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
+  // @ApiResponse({ status: 404, description: 'Order not found' })
+  // async getOrderPaymentHistory(@Param('orderId') orderId: string) {
+  //   try {
+  //     const paymentHistory = await this.paymentManagementService.getOrderPaymentHistory(orderId);
+  //     return {
+  //       orderId,
+  //       paymentHistory,
+  //       totalPayments: paymentHistory.length,
+  //       totalAmount: paymentHistory.reduce((sum, payment) => sum + payment.amount, 0),
+  //       totalRefunded: paymentHistory.reduce((sum, payment) => sum + payment.refundedAmount, 0),
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error getting payment history for order ${orderId}: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.NOT_FOUND,
+  //         error: 'Error getting payment history',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.NOT_FOUND,
+  //     );
+  //   }
+  // }
+
+  // 🛡️ SECURITY: Removed manual confirmation endpoint
+  // Payment confirmation should only happen through Stripe webhooks
+  // This prevents inconsistent states between frontend and webhook processing
+
+  // 🚫 DESHABILITADO: Obtener detalles de payment intent (no necesario para flujo de compra)
+  // @Get(':paymentIntentId')
+  // @ApiOperation({ summary: 'Get payment intent details' })
+  // @ApiResponse({ status: 200, description: 'Payment intent retrieved successfully' })
+  // @ApiResponse({ status: 404, description: 'Payment intent not found' })
+  // async getPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
+  //   try {
+  //     const paymentIntent = await this.paymentsService.getPaymentIntent(paymentIntentId);
+  //     return {
+  //       status: 'success',
+  //       paymentIntent,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error retrieving payment intent: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.NOT_FOUND,
+  //         error: 'Payment intent not found',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.NOT_FOUND,
+  //     );
+  //   }
+  // }
+
+  // 🚫 DESHABILITADO: Cancelar payment intent (no necesario para flujo de compra)
+  // @Post('cancel/:paymentIntentId')
+  // @ApiOperation({ summary: 'Cancel a payment intent' })
+  // @ApiResponse({ status: 200, description: 'Payment intent canceled successfully' })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // async cancelPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
+  //   try {
+  //     const paymentIntent = await this.paymentsService.cancelPaymentIntent(paymentIntentId);
+  //     return {
+  //       status: 'success',
+  //       paymentIntent,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error canceling payment intent: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.BAD_REQUEST,
+  //         error: 'Error canceling payment intent',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.BAD_REQUEST,
+  //     );
+  //   }
+  // }
+
+  // 🚫 DESHABILITADO: Crear reembolso (no necesario para flujo de compra)
+  // @Post('refund/:paymentIntentId')
+  // @ApiOperation({ summary: 'Create a refund for a payment' })
+  // @ApiBody({ type: CreateRefundDto })
+  // @ApiResponse({ status: 200, description: 'Refund created successfully' })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // @ApiResponse({ status: 404, description: 'Payment not found' })
+  // async createRefund(
+  //   @Param('paymentIntentId') paymentIntentId: string,
+  //   @Body() createRefundDto: CreateRefundDto,
+  // ) {
+  //   try {
+  //     // 🛡️ SECURITY: Get payment from our database first
+  //     const payment = await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
+  //     
+  //     // Create refund in Stripe
+  //     const stripeRefund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
+  //     
+  //     // 🛡️ SECURITY: Create refund record in our database
+  //     const refundRecord = await this.paymentManagementService.createRefundRecord(
+  //       payment.id,
+  //       stripeRefund,
+  //       'requested_by_customer', // Default reason
+  //     );
+
+  //     return {
+  //       status: 'success',
+  //       refund: {
+  //         id: refundRecord.id,
+  //         amount: refundRecord.amount,
+  //         currency: refundRecord.currency,
+  //         status: refundRecord.status,
+  //         stripeRefundId: refundRecord.stripeRefundId,
+  //         reason: 'requested_by_customer',
+  //         createdAt: refundRecord.createdAt,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error creating refund: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.BAD_REQUEST,
+  //         error: 'Error creating refund',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.BAD_REQUEST,
+  //     );
+  //   }
+  // }
+
   @Post('webhook')
   @ApiOperation({ summary: 'Handle Stripe webhooks' })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })

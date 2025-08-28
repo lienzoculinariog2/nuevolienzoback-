@@ -17,8 +17,8 @@ console.log('isProduction:', isProduction);
 console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('TYPEORM_SYNC:', process.env.TYPEORM_SYNC);
 console.log('TYPEORM_DROP:', process.env.TYPEORM_DROP);
-console.log('Final synchronize value:', false);
-console.log('Final dropSchema value:', false);
+console.log('Final synchronize value:', process.env.TYPEORM_SYNC === 'true');
+console.log('Final dropSchema value:', process.env.TYPEORM_DROP === 'true');
 if (isProduction) {
   console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO');
 } else {
@@ -37,8 +37,9 @@ const config = {
   port: isProduction ? undefined : process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   username: isProduction ? undefined : process.env.DB_USERNAME,
   password: isProduction ? undefined : process.env.DB_PASSWORD,
-  // Sincronización habilitada temporalmente en producción para crear tablas
-  synchronize: isProduction ? true : false,
+  // ✅ SEGURO: Usar variable de entorno para controlar sincronización
+  // En desarrollo: true (facilita setup), En producción: false (seguridad)
+  synchronize: process.env.TYPEORM_SYNC === 'true',
   logging: !isProduction, // Solo logging en desarrollo
   dropSchema: process.env.TYPEORM_DROP === 'true',
   entities: ['dist/**/*.entity.js'],

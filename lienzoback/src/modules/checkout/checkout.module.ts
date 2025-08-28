@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CheckoutService } from './checkout.service';
 import { CheckoutController } from './checkout.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Orders } from '../orders/entities/order.entity';
@@ -14,6 +13,7 @@ import { DiscountCodesModule } from '../discount-codes/discount-codes.module';
 import { CartModule } from '../cart/cart.module';
 import { OrdersModule } from '../orders/orders.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { CheckoutIntegrationService } from './services/checkout-integration.service';
 
 @Module({
   imports: [
@@ -33,7 +33,7 @@ import { PaymentsModule } from '../payments/payments.module';
     PaymentsModule,
   ],
   controllers: [CheckoutController],
-  providers: [CheckoutService],
-  exports: [CheckoutService],
+  providers: [CheckoutIntegrationService],
+  exports: [CheckoutIntegrationService],
 })
 export class CheckoutModule {}
