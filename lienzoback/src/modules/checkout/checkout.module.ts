@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CheckoutService } from './checkout.service';
 import { CheckoutController } from './checkout.controller';
 import { CheckoutIntegrationService } from './services/checkout-integration.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -34,7 +33,7 @@ import { PaymentsModule } from '../payments/payments.module';
     PaymentsModule,
   ],
   controllers: [CheckoutController],
-  providers: [CheckoutService, CheckoutIntegrationService],
-  exports: [CheckoutService, CheckoutIntegrationService],
+  providers: [CheckoutIntegrationService],
+  exports: [CheckoutIntegrationService],
 })
 export class CheckoutModule {}
