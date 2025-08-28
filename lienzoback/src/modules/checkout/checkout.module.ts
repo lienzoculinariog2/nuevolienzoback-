@@ -13,6 +13,7 @@ import { DiscountCodesModule } from '../discount-codes/discount-codes.module';
 import { CartModule } from '../cart/cart.module';
 import { OrdersModule } from '../orders/orders.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { CheckoutIntegrationService } from './services/checkout-integration.service';
 
 @Module({
   imports: [
