@@ -95,15 +95,17 @@ export class OrdersService {
 
       await manager.save(Orders, newOrder);
 
-      if (discount) {
-        const discountUsed = new DiscountCodesUsed();
-        discountUsed.order = newOrder;
-        discountUsed.discountCode = discount;
-        discountUsed.usedAt = new Date();
-        discountUsed.user = user;
+      // NOTA: El código de descuento se marca como usado cuando el pago sea exitoso, no aquí
+      // para evitar marcar códigos como usados si el pago falla. Ver payment-order.service.ts
+      // if (discount) {
+      //   const discountUsed = new DiscountCodesUsed();
+      //   discountUsed.order = newOrder;
+      //   discountUsed.discountCode = discount;
+      //   discountUsed.usedAt = new Date();
+      //   discountUsed.user = user;
 
-        await manager.save(DiscountCodesUsed, discountUsed);
-      }
+      //   await manager.save(DiscountCodesUsed, discountUsed);
+      // }
 
       for (const itemDto of items) {
         const product = productValidations.get(itemDto.productId);

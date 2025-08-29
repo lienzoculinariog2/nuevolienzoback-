@@ -329,40 +329,22 @@ export class CartService {
   }
 
   async clearCart(userId: string): Promise<void> {
-    console.log('🛒 ===== LIMPIANDO CARRITO =====');
-    console.log(`👤 User ID: ${userId}`);
-    
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items', 'items.product'],
     });
     
     if (!cart) {
-      console.log(`⚠️ Cart for user with id ${userId} not found`);
       this.logger.warn(`Cart for user with id ${userId} not found`);
       throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
     
-    console.log(`✅ Carrito encontrado: ID ${cart.id}`);
-    console.log(`📦 Items en carrito: ${cart.items?.length || 0}`);
-    
     if (cart.items && cart.items.length > 0) {
-      console.log(`🔄 Eliminando ${cart.items.length} items del carrito...`);
-      for (const item of cart.items) {
-        console.log(`🗑️ Eliminando item: ${item.product?.name || 'Producto sin nombre'} (Qty: ${item.quantity})`);
-      }
       await this.cartItemRepository.remove(cart.items);
-      console.log(`✅ Items eliminados del carrito`);
-    } else {
-      console.log(`ℹ️ Carrito ya está vacío`);
     }
     
-    console.log(`🔄 Guardando carrito vacío...`);
     // NO desactivamos el carrito, solo lo dejamos vacío
     await this.cartRepository.remove(cart);
-    console.log(`✅ Carrito guardado (vacío pero activo)`);
-    
-    console.log('✅ ===== CARRITO LIMPIADO EXITOSAMENTE =====');
   }
 
   async findCartItem(userId: string, itemId: string): Promise<CartItem> {

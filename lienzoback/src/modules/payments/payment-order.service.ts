@@ -5,6 +5,8 @@ import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { Products } from '../products/entities/product.entity';
+import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
+import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentIntentDto, CreatePaymentForOrderDto } from './dto/create-payment-intent.dto';
 import { CartService } from '../cart/cart.service';
@@ -22,6 +24,10 @@ export class PaymentOrderService {
     private readonly orderDetailRepository: Repository<OrderDetail>,
     @InjectRepository(Products)
     private readonly productsRepository: Repository<Products>,
+    @InjectRepository(DiscountCodesUsed)
+    private readonly discountCodesUsedRepository: Repository<DiscountCodesUsed>,
+    @InjectRepository(DiscountCodes)
+    private readonly discountCodesRepository: Repository<DiscountCodes>,
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
     @Inject(forwardRef(() => CartService))
@@ -106,6 +112,11 @@ export class PaymentOrderService {
       this.logger.log('🔄 Actualizando stock de productos...');
       await this.updateProductStock(payment.orderId);
       this.logger.log('✅ Stock de productos actualizado');
+
+      // Mark discount code as used (if any)
+      this.logger.log('🔄 Marcando código de descuento como usado...');
+      await this.markDiscountCodeAsUsed(payment.orderId);
+      this.logger.log('✅ Código de descuento marcado como usado');
 
       // Clear the user's cart after successful payment
       try {
@@ -282,6 +293,77 @@ export class PaymentOrderService {
       this.logger.error(`❌ ERROR en updateProductStock: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
       throw error;
+    }
+  }
+
+  /**
+   * Mark discount code as used after successful payment
+   * IMPORTANTE: Este es el ÚNICO lugar donde se debe marcar el código como usado
+   * para evitar marcar códigos como usados si el pago falla.
+   */
+  private async markDiscountCodeAsUsed(orderId: string): Promise<void> {
+    try {
+      this.logger.log('🎫 ===== MARCANDO CÓDIGO DE DESCUENTO COMO USADO =====');
+      this.logger.log(`📋 Order ID: ${orderId}`);
+
+      // Get order with user information
+      const order = await this.ordersRepository.findOne({
+        where: { id: orderId },
+        relations: ['user'],
+      });
+
+      if (!order) {
+        this.logger.warn(`⚠️ Orden ${orderId} no encontrada`);
+        return;
+      }
+
+      // Check if order has discount codes used (this would indicate a discount was applied)
+      const existingDiscountUsed = await this.discountCodesUsedRepository.findOne({
+        where: { order: { id: orderId } },
+        relations: ['discountCode'],
+      });
+
+      if (existingDiscountUsed) {
+        this.logger.log(`ℹ️ Código de descuento ya marcado como usado: ${existingDiscountUsed.discountCode?.code}`);
+        return;
+      }
+
+      // Check if the order has a discount code ID stored
+      if (order.discountCodeId) {
+        this.logger.log(`🎫 Código de descuento encontrado en la orden: ${order.discountCodeId}`);
+        
+        // Get the discount code details
+        const discountCode = await this.discountCodesRepository.findOne({
+          where: { id: order.discountCodeId },
+        });
+
+        if (!discountCode) {
+          this.logger.warn(`⚠️ Código de descuento ${order.discountCodeId} no encontrado`);
+          return;
+        }
+
+        this.logger.log(`🎫 Código de descuento: ${discountCode.code} (${discountCode.percentage}%)`);
+
+        // Create the discount code used record
+        const discountUsed = this.discountCodesUsedRepository.create({
+          discountCode: { id: order.discountCodeId },
+          user: { id: order.userId },
+          order: { id: orderId },
+          usedAt: new Date(),
+        });
+
+        await this.discountCodesUsedRepository.save(discountUsed);
+        this.logger.log(`✅ Código de descuento ${discountCode.code} marcado como usado exitosamente`);
+      } else {
+        this.logger.log(`ℹ️ No se aplicó código de descuento en esta orden`);
+      }
+
+      this.logger.log('✅ ===== VERIFICACIÓN DE CÓDIGO DE DESCUENTO COMPLETADA =====');
+    } catch (error) {
+      this.logger.error(`❌ ERROR en markDiscountCodeAsUsed: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
+      // Don't throw error here as the payment was successful
+      // Just log it for monitoring
     }
   }
 }

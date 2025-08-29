@@ -32,9 +32,6 @@ import { NotificationsController } from './notifications.controller';
           dir: path.resolve(
             __dirname,
             'templates',
-            'modules',
-            'notifications',
-            'templates',
           ),
           adapter: new HandlebarsAdapter(),
           options: {

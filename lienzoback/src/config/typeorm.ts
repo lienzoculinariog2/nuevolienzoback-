@@ -10,24 +10,6 @@ if (process.env.NODE_ENV !== 'production') {
 // Configuración para Render (producción) vs desarrollo local
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Logs para debugging
-console.log('🔍 TypeORM Config Debug:');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('isProduction:', isProduction);
-console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
-console.log('TYPEORM_SYNC:', process.env.TYPEORM_SYNC);
-console.log('TYPEORM_DROP:', process.env.TYPEORM_DROP);
-console.log('Final synchronize value:', process.env.TYPEORM_SYNC === 'true');
-console.log('Final dropSchema value:', process.env.TYPEORM_DROP === 'true');
-if (isProduction) {
-  console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO');
-} else {
-  console.log('DB_HOST:', process.env.DB_HOST);
-  console.log('DB_NAME:', process.env.DB_NAME);
-  console.log('DB_USERNAME:', process.env.DB_USERNAME);
-  console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? 'CONFIGURADO' : 'NO CONFIGURADO');
-}
-
 const config = {
   type: 'postgres',
   // En producción usar DATABASE_URL, en desarrollo usar variables individuales

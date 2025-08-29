@@ -32,7 +32,6 @@ export class ProductsService {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     });
-    console.log('✅ Cloudinary configurado en ProductsService');
   }
 
   // Método privado para subir la imagen a Cloudinary
@@ -117,11 +116,9 @@ export class ProductsService {
     // Procesar ingredientes - crear si no existen
     const ingredients: Ingredients[] = [];
     if (dto.ingredients && dto.ingredients.length > 0) {
-      console.log('Procesando ingredientes:', dto.ingredients);
       for (const ingredientName of dto.ingredients) {
         const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
         ingredients.push(ingredient);
-        console.log(`Ingrediente procesado: ${ingredient.name} (ID: ${ingredient.id})`);
       }
     }
 
@@ -139,16 +136,13 @@ export class ProductsService {
     });
 
     const savedProduct = await this.productsRepository.save(product);
-    console.log('Producto creado con ID:', savedProduct.id);
 
     // Procesar imagen si se proporciona
     if (file) {
-      console.log('Procesando imagen:', file.originalname);
       try {
         const imageUrl = await this.uploadImage(file, savedProduct.id);
         savedProduct.imgUrl = imageUrl;
         await this.productsRepository.save(savedProduct);
-        console.log('URL de imagen actualizada en el producto:', savedProduct.imgUrl);
       } catch (error) {
         console.error('Error al subir imagen:', error);
       }
@@ -273,12 +267,10 @@ export class ProductsService {
 
     // Procesar ingredientes - crear si no existen
     if (ingredients && ingredients.length > 0) {
-      console.log('Procesando ingredientes en update:', ingredients);
       const newIngredients: Ingredients[] = [];
       for (const ingredientName of ingredients) {
         const ingredient = await this.ingredientsService.findOrCreate(ingredientName);
         newIngredients.push(ingredient);
-        console.log(`Ingrediente procesado en update: ${ingredient.name} (ID: ${ingredient.id})`);
       }
       product.ingredients = newIngredients;
     }
@@ -289,16 +281,13 @@ export class ProductsService {
     // Activar automáticamente si se agrega stock y el producto está inactivo
     if (productData.stock !== undefined && productData.stock > 0 && !product.isActive) {
       product.isActive = true;
-      console.log(`Producto ${product.name} activado automáticamente al agregar stock`);
     }
 
     // Procesar imagen si se proporciona
     if (file) {
-      console.log('Procesando imagen en update:', file.originalname);
       try {
-        const imageUrl = await this.uploadImage(file, product.id); // <-- CAMBIO 3: Usa this.uploadImage en lugar de fileUploadService
-        product.imgUrl = imageUrl; // <-- CAMBIO 3: Asigna la URL directamente
-        console.log('Imagen actualizada exitosamente');
+        const imageUrl = await this.uploadImage(file, product.id);
+        product.imgUrl = imageUrl;
       } catch (error) {
         console.error('Error al actualizar imagen:', error);
       }
@@ -306,7 +295,6 @@ export class ProductsService {
 
     // Guardar el producto
     const savedProduct = await this.productsRepository.save(product);
-    console.log('Producto actualizado con ID:', savedProduct.id);
 
     // Retornar producto con relaciones actualizadas
     return this.productsRepository.findOneOrFail({
@@ -353,7 +341,6 @@ export class ProductsService {
     }
 
     productToActivate.isActive = true;
-    console.log(`Producto ${productToActivate.name} activado exitosamente`);
 
     return this.productsRepository.save(productToActivate);
   }

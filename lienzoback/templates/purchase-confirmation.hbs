@@ -1,0 +1,121 @@
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .header {
+        text-align: center;
+        background-color: #080808;
+        color: white;
+        padding: 10px;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        padding: 20px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 1em;
+        color: #777;
+        margin-top: 20px;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #de6d03e2;
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .order-details,
+      .product-list {
+        margin-top: 20px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      }
+      .product-list table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .product-list th,
+      .product-list td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .product-list th {
+        background-color: #f2f2f2;
+      }
+      .total-row {
+        font-weight: bold;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h2>¡Gracias por tu compra!</h2>
+      </div>
+      <div class='content'>
+        <p>Hola {{order.user.name}},</p>
+        <p>Tu orden **#{{order.id}}** ha sido confirmada.</p>
+
+        <div class='order-details'>
+          <h3>Resumen de tu pedido:</h3>
+          <p><strong>Fecha del pedido:</strong> {{dateFormat order.date}}</p>
+          <p><strong>Estado del pedido:</strong> {{order.statusOrder}}</p>
+          <p><strong>Dirección de envío:</strong> {{order.shippingAddress}}</p>
+          <p><strong>Total pagado:</strong> ${{order.total}}</p>
+        </div>
+
+        <div class='product-list'>
+          <h3>Productos:</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unitario</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each order.orderDetails}}
+                <tr>
+                  <td>{{this.product.name}}</td>
+                  <td>{{this.quantity}}</td>
+                  <td>${{this.unitPrice}}</td>
+                  <td>${{multiply this.quantity this.unitPrice}}</td>
+                </tr>
+              {{/each}}
+              <tr class='total-row'>
+                <td colspan='3' style='text-align: right;'>Total:</td>
+                <td>${{order.total}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>¡Gracias por confiar en Lienzo Culinario!</p>
+        <p style='text-align: center;'>
+          <a href='https://lienzofront.vercel.app/orders/{{order.id}}' class='button'>Ver detalles
+            de la orden</a>
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Atentamente,<br />El equipo de Lienzo Culinario</p>
+      </div>
+    </div>
+  </body>
+</html>

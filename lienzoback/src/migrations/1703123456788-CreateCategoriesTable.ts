@@ -5,7 +5,6 @@ export class CreateCategoriesTable1703123456788 implements MigrationInterface {
     // Verificar si la tabla ya existe
     const tableExists = await queryRunner.hasTable('categories');
     if (tableExists) {
-      console.log('✅ Tabla categories ya existe, saltando creación');
       return;
     }
 
@@ -50,7 +49,6 @@ export class CreateCategoriesTable1703123456788 implements MigrationInterface {
       }),
       true
     );
-    console.log('✅ Tabla categories creada exitosamente');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

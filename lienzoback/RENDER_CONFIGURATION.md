@@ -64,11 +64,25 @@ El `package.json` ya está configurado correctamente:
 {
   "scripts": {
     "build": "nest build",
-    "start": "npm run build && npm run copy:templates && node dist/src/main",
-    "start:prod": "npm run build && npm run copy:templates && node dist/src/main"
+    "start": "npm run build && npm run copy:templates && node dist/main",
+    "start:prod": "npm run build && npm run copy:templates && node dist/main"
   }
 }
 ```
+
+### **Verificación Pre-Deploy:**
+
+Antes de hacer deploy, ejecuta este comando para verificar que todo esté correcto:
+
+```bash
+npm run verify:render
+```
+
+Este script verificará:
+- ✅ Que el build se completó correctamente
+- ✅ Que `dist/main.js` existe
+- ✅ Que las plantillas están copiadas
+- ✅ Que los scripts apuntan a la ruta correcta
 
 ## 🔍 Verificación de Configuración:
 
@@ -94,6 +108,12 @@ Final dropSchema value: false
 
 ## 🐛 Troubleshooting:
 
+### **Error: Cannot find module '/opt/render/project/src/lienzoback/dist/src/main'**
+**Solución:**
+1. Verifica que los scripts en `package.json` apunten a `dist/main` (no `dist/src/main`)
+2. Ejecuta `npm run verify:render` para verificar la configuración
+3. Asegúrate de que el build se complete correctamente
+
 ### **Si ves tablas duplicadas:**
 - Verifica que `TYPEORM_SYNC=false`
 - Ejecuta el script de limpieza: `npm run clean-tables`
@@ -101,7 +121,12 @@ Final dropSchema value: false
 ### **Si la aplicación no inicia:**
 - Verifica que `DATABASE_URL` esté configurada
 - Verifica que `NODE_ENV=production`
+- Ejecuta `npm run verify:render` para verificar el build
 
 ### **Si hay errores de migración:**
 - El servicio de migración se ejecuta automáticamente al iniciar
 - Verifica los logs para ver si hay errores específicos
+
+### **Si las plantillas de email no funcionan:**
+- Verifica que el script `copy:templates` se ejecute correctamente
+- Asegúrate de que las plantillas estén en `dist/modules/notifications/templates`

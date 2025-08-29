@@ -45,6 +45,9 @@ export class Orders {
   @Column({ name: 'payment_status', type: 'character varying', nullable: true })
   paymentStatus: string;
 
+  @Column({ name: 'discount_code_id', type: 'uuid', nullable: true })
+  discountCodeId: string;
+
   @ManyToOne(() => Users, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })
   user: Users;

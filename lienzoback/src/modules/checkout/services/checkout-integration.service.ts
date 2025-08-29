@@ -346,6 +346,7 @@ export class CheckoutIntegrationService {
         status: OrderStatus.PENDING,
         shippingAddress,
         date: new Date(),
+        discountCodeId: discountCode?.id, // Almacenar el ID del código de descuento
       });
 
       const savedOrder = await manager.save(Orders, order);
@@ -365,16 +366,17 @@ export class CheckoutIntegrationService {
       // NOTA: El stock se descuenta cuando el pago sea exitoso, no aquí
       // para evitar descuentos dobles. Ver payment-order.service.ts
 
-      // Marcar código de descuento como usado si existe
-      if (discountCode) {
-        const discountUsed = this.discountCodesUsedRepository.create({
-          discountCode: { id: discountCode.id },
-          user: { id: userId },
-          order: savedOrder,
-          usedAt: new Date(),
-        });
-        await manager.save(DiscountCodesUsed, discountUsed);
-      }
+      // NOTA: El código de descuento se marca como usado cuando el pago sea exitoso, no aquí
+      // para evitar marcar códigos como usados si el pago falla. Ver payment-order.service.ts
+      // if (discountCode) {
+      //   const discountUsed = this.discountCodesUsedRepository.create({
+      //     discountCode: { id: discountCode.id },
+      //     user: { id: userId },
+      //     order: savedOrder,
+      //     usedAt: new Date(),
+      //   });
+      //   await manager.save(DiscountCodesUsed, discountUsed);
+      // }
 
       return savedOrder;
     });

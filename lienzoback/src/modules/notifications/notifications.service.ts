@@ -20,18 +20,35 @@ export class NotificationsService {
 
   async sendRegistrationConfirmation(user: Users) {
     try {
+      this.logger.log(`📧 Intentando enviar email de confirmación a ${user.email}`);
+      
+      // Validar que el usuario tenga email
+      if (!user.email) {
+        this.logger.warn(`⚠️ Usuario ${user.id} no tiene email configurado`);
+        return;
+      }
+
       await this.mailerService.sendMail({
         to: user.email,
-        subject: `¡Bienvenido a Lienzo Culinario, ${user.name}! 🎉`,
+        subject: `¡Bienvenido a Lienzo Culinario, ${user.name || 'Usuario'}! 🎉`,
         template: 'signUp-confirmation',
         context: {
-          name: user.name,
+          name: user.name || user.email.split('@')[0],
         },
       });
-      this.logger.log(`Registration confirmation email sent to ${user.email}`);
+      this.logger.log(`✅ Registration confirmation email sent to ${user.email}`);
     } catch (error) {
-      this.logger.error(`Error sending registration email to ${user.email}:`, error.message);
+      this.logger.error(`❌ Error sending registration email to ${user.email}:`, error.message);
+      this.logger.error(`❌ Error details:`, error);
+      
       // No lanzar el error para no afectar el registro del usuario
+      // Solo loggear el error para debugging
+      if (error.code) {
+        this.logger.error(`❌ Error code: ${error.code}`);
+      }
+      if (error.response) {
+        this.logger.error(`❌ SMTP response: ${error.response}`);
+      }
     }
   }
 

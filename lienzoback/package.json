@@ -8,10 +8,10 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "npm run build && npm run copy:templates && node dist/src/main",
+    "start": "npm run build && npm run copy:templates && node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "npm run build && npm run copy:templates && node dist/src/main",
+    "start:prod": "npm run build && npm run copy:templates && node dist/main",
     "copy:templates": "node copy-templates.js",
     "build:prod": "npm run build && npm run copy:templates",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -36,7 +36,8 @@
     "debug:inconsistencies": "node debug-inconsistencies.js",
     "debug:checkout": "node debug-checkout-issues.js",
     "test:webhook": "node test-webhook-success.js",
-    "check:webhook": "node check-webhook-config.js"
+    "check:webhook": "node check-webhook-config.js",
+    "verify:render": "node verify-render-build.js"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.9.0",
