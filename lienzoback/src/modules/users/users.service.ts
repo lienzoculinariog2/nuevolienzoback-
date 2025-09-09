@@ -38,7 +38,7 @@ export class UsersService {
     newUser.isSuscribed = false;
 
     await this.userRepository.save(newUser);
-    await this.notificationService.sendRegistrationConfirmation(newUser);
+    //await this.notificationService.sendRegistrationConfirmation(newUser); //Activar si desea enviar correos
     return newUser;
   }
 

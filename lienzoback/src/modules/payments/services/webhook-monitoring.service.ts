@@ -26,10 +26,16 @@ export class WebhookMonitoringService {
   /**
    * Log webhook event for monitoring
    */
-  async logWebhookEvent(event: Stripe.Event, status: 'success' | 'failed', errorMessage?: string): Promise<void> {
+  async logWebhookEvent(
+    event: Stripe.Event,
+    status: 'success' | 'failed',
+    errorMessage?: string,
+  ): Promise<void> {
     const paymentIntentId = this.extractPaymentIntentId(event);
-    
-    this.logger.log(`Webhook Event: ${event.type} | Status: ${status} | PaymentIntent: ${paymentIntentId}`);
+
+    this.logger.log(
+      `Webhook Event: ${event.type} | Status: ${status} | PaymentIntent: ${paymentIntentId}`,
+    );
 
     // Store event log in payment metadata
     if (paymentIntentId) {
@@ -81,11 +87,11 @@ export class WebhookMonitoringService {
       recentFailures: [] as WebhookEventLog[],
     };
 
-    payments.forEach(payment => {
+    payments.forEach((payment) => {
       if (payment.metadata?.lastEvent) {
         const event = payment.metadata.lastEvent;
         stats.totalEvents++;
-        
+
         if (event.status === 'success') {
           stats.successfulEvents++;
         } else if (event.status === 'failed') {
@@ -110,7 +116,7 @@ export class WebhookMonitoringService {
 
     if (stats.failedEvents > 0) {
       this.logger.warn(`Found ${stats.failedEvents} failed webhook events in the last 24 hours`);
-      
+
       // Send alert to monitoring service
       await this.sendAlert({
         type: 'webhook_failures',
@@ -126,10 +132,11 @@ export class WebhookMonitoringService {
    */
   async monitorProcessingTime(event: Stripe.Event, startTime: number): Promise<void> {
     const processingTime = Date.now() - startTime;
-    
-    if (processingTime > 5000) { // Alert if processing takes more than 5 seconds
+
+    if (processingTime > 5000) {
+      // Alert if processing takes more than 5 seconds
       this.logger.warn(`Webhook processing took ${processingTime}ms for event ${event.type}`);
-      
+
       await this.sendAlert({
         type: 'slow_webhook_processing',
         message: `Webhook processing took ${processingTime}ms`,
@@ -150,9 +157,9 @@ export class WebhookMonitoringService {
       case 'payment_intent.canceled':
       case 'payment_intent.processing':
       case 'payment_intent.requires_action':
-        return (event.data.object as Stripe.PaymentIntent).id;
+        return event.data.object.id;
       case 'charge.refunded':
-        return (event.data.object as Stripe.Charge).payment_intent as string;
+        return event.data.object.payment_intent as string;
       default:
         return undefined;
     }
@@ -161,7 +168,10 @@ export class WebhookMonitoringService {
   /**
    * Update payment event log in metadata
    */
-  private async updatePaymentEventLog(paymentIntentId: string, eventLog: WebhookEventLog): Promise<void> {
+  private async updatePaymentEventLog(
+    paymentIntentId: string,
+    eventLog: WebhookEventLog,
+  ): Promise<void> {
     try {
       await this.paymentRepository
         .createQueryBuilder()
@@ -184,10 +194,15 @@ export class WebhookMonitoringService {
   /**
    * Send event to external monitoring service
    */
-  private async sendToMonitoringService(event: Stripe.Event, status: string, errorMessage?: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  private async sendToMonitoringService(
+    event: Stripe.Event,
+    status: string,
+    errorMessage?: string,
+  ): Promise<void> {
     // TODO: Implement integration with external monitoring service
     // Examples: Sentry, DataDog, New Relic, etc.
-    
+
     const monitoringData = {
       service: 'payments',
       event: 'webhook_processed',
@@ -208,6 +223,7 @@ export class WebhookMonitoringService {
   /**
    * Send alert to monitoring service
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   private async sendAlert(alert: {
     type: string;
     message: string;
@@ -215,7 +231,7 @@ export class WebhookMonitoringService {
   }): Promise<void> {
     // TODO: Implement alert system
     // Examples: Slack, email, PagerDuty, etc.
-    
+
     this.logger.warn(`ALERT: ${alert.type} - ${alert.message}`, alert);
   }
 
@@ -228,7 +244,7 @@ export class WebhookMonitoringService {
     stats: any;
   }> {
     const stats = await this.getWebhookStats(1); // Last 24 hours
-    
+
     if (stats.totalEvents === 0) {
       return {
         status: 'warning',
@@ -238,7 +254,7 @@ export class WebhookMonitoringService {
     }
 
     const failureRate = (stats.failedEvents / stats.totalEvents) * 100;
-    
+
     if (failureRate > 10) {
       return {
         status: 'critical',

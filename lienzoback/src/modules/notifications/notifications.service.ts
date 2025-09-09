@@ -56,10 +56,6 @@ export class NotificationsService {
   }
 
   // @Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
-  @Cron('0,15,30,45 11 * * 4', {
-    name: 'weekly-newsletter',
-    timeZone: 'America/Buenos_Aires',
-  })
   async handleWeeklyNewsletter() {
     this.logger.log('Executing Cron Job: Sending weekly newsletter');
     try {

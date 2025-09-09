@@ -137,7 +137,7 @@ export class CheckoutIntegrationService {
       return {
         status: 'no_cart',
         message: 'El usuario no tiene carrito',
-        issues: []
+        issues: [],
       };
     }
 
@@ -145,7 +145,7 @@ export class CheckoutIntegrationService {
       return {
         status: 'empty_cart',
         message: 'El carrito está vacío',
-        issues: []
+        issues: [],
       };
     }
 
@@ -168,7 +168,7 @@ export class CheckoutIntegrationService {
         issues.push(`Item del carrito ${item.id} no tiene producto asociado`);
         invalidItems.push({
           id: item.id,
-          issue: 'no_product'
+          issue: 'no_product',
         });
       } else {
         const product = await this.productsRepository.findOneBy({ id: item.product.id });
@@ -177,7 +177,7 @@ export class CheckoutIntegrationService {
           invalidItems.push({
             id: item.id,
             productId: item.product.id,
-            issue: 'product_not_found'
+            issue: 'product_not_found',
           });
         } else {
           validItems.push({
@@ -185,7 +185,7 @@ export class CheckoutIntegrationService {
             productId: item.product.id,
             productName: product.name,
             quantity: item.quantity,
-            price: product.price
+            price: product.price,
           });
         }
       }
@@ -199,7 +199,7 @@ export class CheckoutIntegrationService {
       invalidItemsCount: invalidItems.length,
       issues,
       validItems,
-      invalidItems
+      invalidItems,
     };
   }
 
@@ -222,7 +222,7 @@ export class CheckoutIntegrationService {
     }
 
     // Validar stock y calcular totales
-    const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+    const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
       await this.validateCartAndCalculateTotals(cart, checkoutDto);
 
     let savings = 0;

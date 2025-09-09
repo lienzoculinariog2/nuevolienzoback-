@@ -202,10 +202,10 @@ export class PaymentsController {
   //   try {
   //     // 🛡️ SECURITY: Get payment from our database first
   //     const payment = await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
-  //     
+  //
   //     // Create refund in Stripe
   //     const stripeRefund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
-  //     
+  //
   //     // 🛡️ SECURITY: Create refund record in our database
   //     const refundRecord = await this.paymentManagementService.createRefundRecord(
   //       payment.id,
@@ -352,7 +352,7 @@ export class PaymentsController {
           break;
         case 'payment_intent.payment_failed':
           this.logger.log('🔄 Llamando a handlePaymentFailure...');
-          this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
+          void this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
           this.logger.log('✅ handlePaymentFailure completado');
           break;
         case 'payment_intent.canceled':

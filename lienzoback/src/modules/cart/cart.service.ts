@@ -335,33 +335,25 @@ export class CartService {
     });
 
     if (!cart) {
-      console.log(`⚠️ Cart for user with id ${userId} not found`);
-      this.logger.warn(`Cart for user with id ${userId} not found`);
       throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
 
-    console.log(`✅ Carrito encontrado: ID ${cart.id}`);
-    console.log(`📦 Items en carrito: ${cart.items?.length || 0}`);
-
     if (cart.items && cart.items.length > 0) {
-      console.log(`🔄 Eliminando ${cart.items.length} items del carrito...`);
+      console.log(`Eliminando ${cart.items.length} items del carrito...`);
       for (const item of cart.items) {
         console.log(
-          `🗑️ Eliminando item: ${item.product?.name || 'Producto sin nombre'} (Qty: ${item.quantity})`,
+          `Eliminando item: ${item.product?.name || 'Producto sin nombre'} (Qty: ${item.quantity})`,
         );
       }
       await this.cartItemRepository.remove(cart.items);
-      console.log(`✅ Items eliminados del carrito`);
+      console.log(`Items eliminados del carrito`);
     } else {
-      console.log(`ℹ️ Carrito ya está vacío`);
+      console.log(` Carrito ya está vacío`);
     }
 
-    console.log(`🔄 Guardando carrito vacío...`);
+    console.log(`Guardando carrito vacío...`);
     // NO desactivamos el carrito, solo lo dejamos vacío
     await this.cartRepository.remove(cart);
-    console.log(`✅ Carrito guardado (vacío pero activo)`);
-
-    console.log('✅ ===== CARRITO LIMPIADO EXITOSAMENTE =====');
   }
 
   async findCartItem(userId: string, itemId: string): Promise<CartItem> {

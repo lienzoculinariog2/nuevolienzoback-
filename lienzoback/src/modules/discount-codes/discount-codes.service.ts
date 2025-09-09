@@ -53,13 +53,13 @@ export class DiscountCodesService {
     });
 
     if (!discount) {
-      throw new BadRequestException('Discount code does not exist');
+      throw new BadRequestException('El código de descuento no existe');
     }
     if (!discount.isActive) {
-      throw new BadRequestException('Discount code is not active ');
+      throw new BadRequestException('El código de descuento no está activo');
     }
     if (discount.validUntil < new Date()) {
-      throw new BadRequestException('Discount code has expired');
+      throw new BadRequestException('El código de descuento expiró');
     }
 
     if (discount.isSingleUsePerUser) {
@@ -71,7 +71,7 @@ export class DiscountCodesService {
         relations: ['order', 'order.user'],
       });
       if (usedCode) {
-        throw new BadRequestException('This discount code has already been used.');
+        throw new BadRequestException('Código de descuento ya fue usado.');
       }
     }
     return true;
@@ -83,7 +83,7 @@ export class DiscountCodesService {
     });
 
     if (!discount) {
-      throw new NotFoundException('Discount code not found or is not valid.');
+      throw new NotFoundException('Código de descuento no encontrado o inválido.');
     }
 
     const currentDate = new Date();
@@ -95,7 +95,7 @@ export class DiscountCodesService {
 
     if (discountDate < today) {
       throw new BadRequestException(
-        `This discount code expired on ${new Date(discount.validUntil).toDateString()}.`,
+        `El código de descuento expiró en ${new Date(discount.validUntil).toDateString()}.`,
       );
     }
     return discount;
@@ -104,7 +104,7 @@ export class DiscountCodesService {
   async update(id: string, updateDiscountCodeDto: UpdateDiscountCodeDto): Promise<DiscountCodes> {
     const discount = await this.discountCodesRepository.findOne({ where: { id } });
     if (!discount) {
-      throw new NotFoundException('Discount code not found.');
+      throw new NotFoundException('Código de descuento no encontrado.');
     }
 
     if (updateDiscountCodeDto.percentage !== undefined) {
@@ -126,14 +126,14 @@ export class DiscountCodesService {
   async inactivate(id: string): Promise<void> {
     const result = await this.discountCodesRepository.update(id, { isActive: false });
     if (result.affected === 0) {
-      throw new NotFoundException(`Discount code with ID "${id}" not found.`);
+      throw new NotFoundException(`Código de descuento con "${id}" no encontrado.`);
     }
   }
 
   async activate(id: string): Promise<void> {
     const result = await this.discountCodesRepository.update(id, { isActive: true });
     if (result.affected === 0) {
-      throw new NotFoundException(`Discount code with ID "${id}" not found.`);
+      throw new NotFoundException(`Código de descuento con "${id}" no encontrado.`);
     }
   }
 }
