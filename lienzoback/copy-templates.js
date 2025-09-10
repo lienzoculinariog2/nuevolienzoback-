@@ -3,8 +3,8 @@ const path = require('path');
 
 console.log('📁 Copiando plantillas de email...');
 
-const sourceDir = path.join(__dirname, '../src/modules/notifications/templates');
-const targetDir = path.join(__dirname, '../dist/modules/notifications/templates');
+const sourceDir = path.join(__dirname, 'src/modules/notifications/templates');
+const targetDir = path.join(__dirname, 'dist/modules/notifications/templates');
 
 try {
   // Verificar si el directorio fuente existe
