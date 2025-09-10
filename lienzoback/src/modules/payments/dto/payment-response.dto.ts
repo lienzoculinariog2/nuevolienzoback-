@@ -15,7 +15,7 @@ export class PaymentResponseDto {
 
   @ApiProperty({
     description: 'Payment amount in dollars',
-    example: 25.50,
+    example: 25.5,
     minimum: 0.01,
   })
   amount: number;

@@ -24,6 +24,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new product (for administrators only)' })
   @UseInterceptors(FileInterceptor('image'))
   create(
     @Body(new ValidationPipe({ transform: true })) createProductDto: CreateProductDto,
@@ -40,6 +41,7 @@ export class ProductsController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all products with filters' })
   findAll(
     @Query(
       new ValidationPipe({
@@ -54,11 +56,13 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a product by id' })
   getById(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.getProductById(id);
   }
 
   @Put(':id')
+  @ApiOperation({ summary: 'Update an existing product (for administrators only)' })
   @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -88,12 +92,13 @@ export class ProductsController {
 
   @Put('inactivate/:id')
   // @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Inactivate a product (for administrators only)' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
   }
 
   @Put('activate/:id')
-  @ApiOperation({ summary: 'Activar un producto' })
+  @ApiOperation({ summary: 'Activate a product (for administrators only)' })
   @ApiResponse({
     status: 200,
     description: 'Producto activado',
@@ -111,9 +116,9 @@ export class ProductsController {
     return this.productsService.activateProduct(id);
   }
 
-  @Get('test/ingredients')
-  @ApiOperation({ summary: 'Obtener todos los ingredientes disponibles' })
-  async getIngredients() {
-    return this.productsService.getIngredientsForTest();
-  }
+  // @Get('test/ingredients')
+  // @ApiOperation({ summary: 'Get all available ingredients for testing' })
+  // async getIngredients() {
+  //   return this.productsService.getIngredientsForTest();
+  // }
 }

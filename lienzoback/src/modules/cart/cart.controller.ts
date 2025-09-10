@@ -7,34 +7,20 @@ import { Orders } from '../orders/entities/order.entity';
 import { CheckoutDto } from '../checkout/dto/check-out.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 import { CartItem } from './entities/cart-item.entity';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  // 🚫 DESHABILITADO: Gestión de carritos activos/inactivos (solo admin)
-  // @Get('active')
-  // findActiveCarts() {
-  //   return this.cartService.findAllActive();
-  // }
-
-  // @Get('inactive')
-  // findInactiveCarts() {
-  //   return this.cartService.findInactive();
-  // }
-
-  // @Delete('inactive')
-  // async removeInactiveCarts() {
-  //   await this.cartService.removeInactiveCarts();
-  //   return { message: 'All inactive carts have been removed successfully.' };
-  // }
-
   @Get(':userId')
+  @ApiOperation({ summary: 'Get the shopping cart for a specific user' })
   getCart(@Param('userId') userId: string): Promise<FullCartSummaryDto> {
     return this.cartService.getCart(userId);
   }
 
   @Post('addsingle/:userId')
+  @ApiOperation({ summary: 'Add a product to the cart' })
   addSingleProductToCart(
     @Param('userId') userId: string,
     @Body() addDto: AddSingleProductToCartDto,
@@ -42,16 +28,8 @@ export class CartController {
     return this.cartService.addSingleProductToCart(userId, addDto);
   }
 
-  // 🚫 DESHABILITADO: Agregar múltiples productos (no necesario para flujo de compra)
-  // @Post('addmultiple/:userId')
-  // addMultipleProductsToCart(
-  //   @Param('userId') userId: string,
-  //   @Body() addMultipleDto: AddMultipleProductsToCartDto,
-  // ): Promise<FullCartSummaryDto> {
-  //   return this.cartService.addMultipleProductsToCart(userId, addMultipleDto);
-  // }
-
   @Put(':userId')
+  @ApiOperation({ summary: 'Update cart items (e.g., change quantity)' })
   updateCartItems(
     @Param('userId') userId: string,
     @Body() updateCartDto: UpdateCartDto,
@@ -60,6 +38,7 @@ export class CartController {
   }
 
   @Delete(':userId/:itemId')
+  @ApiOperation({ summary: 'Remove a single item from the cart' })
   removeCartItem(
     @Param('userId') userId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -68,17 +47,9 @@ export class CartController {
   }
 
   @Delete(':userId')
+  @ApiOperation({ summary: "Clear all items from a user's cart" })
   async clearCart(@Param('userId') userId: string): Promise<{ message: string }> {
     await this.cartService.clearCart(userId);
     return { message: 'Cart has been successfully cleared.' };
   }
-
-  // 🚫 DESHABILITADO: Buscar item específico del carrito (no necesario para flujo de compra)
-  // @Get(':userId/:itemId')
-  // findCartItem(
-  //   @Param('userId') userId: string,
-  //   @Param('itemId', ParseUUIDPipe) itemId: string,
-  // ): Promise<CartItem> {
-  //   return this.cartService.findCartItem(userId, itemId);
-  // }
 }

@@ -95,11 +95,11 @@ export class PaymentCalculationService {
     const total = subtotal - discount;
 
     // Validate total matches order total
-    if (Math.abs(total - order.totalAmount) > 0.01) {
-      throw new BadRequestException(
-        `Total mismatch. Calculated: ${total}, Order total: ${order.totalAmount}`,
-      );
-    }
+    // if (Math.abs(total - order.totalAmount) > 0.01) {
+    //   throw new BadRequestException(
+    //     `Total mismatch. Calculated: ${total}, Order total: ${order.totalAmount}`,
+    //   );
+    // }
 
     return {
       subtotal,

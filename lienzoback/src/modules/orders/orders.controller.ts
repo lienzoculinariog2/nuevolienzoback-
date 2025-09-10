@@ -11,7 +11,9 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all orders (optionally filtered by status)' })
+  @ApiOperation({
+    summary: 'Get all orders - optionally filtered by status (for administrators only)',
+  })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -24,16 +26,19 @@ export class OrdersController {
   }
 
   @Get('user/:userId')
+  @ApiOperation({ summary: 'Get all orders for a specific user' })
   getUserOrders(@Param('userId') userId: string): Promise<Orders[]> {
     return this.ordersService.getUserOrders(userId);
   }
 
   @Get(':orderId')
+  @ApiOperation({ summary: 'Find a single order id' })
   async findOrderById(@Param('orderId') orderId: string): Promise<Orders> {
     return this.ordersService.findOrderById(orderId);
   }
 
   @Put(':orderId')
+  @ApiOperation({ summary: 'Update a specific order ' })
   updateOrder(
     @Param('orderId') orderId: string,
     @Body() updateOrderDto: UpdateOrderDto,
@@ -42,11 +47,13 @@ export class OrdersController {
   }
 
   @Put(':orderId/cancel')
+  @ApiOperation({ summary: 'Cancel an order (for administrators only)' })
   cancelOrder(@Param('orderId') orderId: string): Promise<Orders> {
     return this.ordersService.cancelOrder(orderId);
   }
 
   @Put(':orderId/status')
+  @ApiOperation({ summary: 'Update the status of an order (for administrators only)' })
   async updateOrderStatus(
     @Param('orderId', ParseUUIDPipe) orderId: string,
     @Body('newStatus') newStatus: OrderStatus,

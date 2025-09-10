@@ -46,7 +46,7 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   @IsNotEmpty()
-  items: OrderItemDto[];
+  items?: OrderItemDto[];
 
   @IsString()
   @IsOptional()
