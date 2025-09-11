@@ -15,12 +15,14 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new category (for administrators only)' })
   @UseInterceptors(FileInterceptor('file'))
   create(
     @Body() categoryDto: CreateCategoryDto,
@@ -36,6 +38,7 @@ export class CategoriesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all categories' })
   findAll(@Query('page') page: string, @Query('limit') limit: string) {
     if (page && limit) {
       return this.categoriesService.findAll(+page, +limit);
@@ -44,11 +47,13 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a category by id' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Put(':id')
+  @ApiOperation({ summary: 'Update an existing category (for administrators only)' })
   @UseInterceptors(FileInterceptor('file'))
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -65,11 +70,13 @@ export class CategoriesController {
   }
 
   @Put('inactivate/:id')
+  @ApiOperation({ summary: 'Inactivate a category by id (for administrators only)' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.inactivate(id);
   }
 
   @Put('activate/:id')
+  @ApiOperation({ summary: 'Activate a category by id (for administrators only)' })
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.activate(id);
   }

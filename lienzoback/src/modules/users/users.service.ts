@@ -38,7 +38,7 @@ export class UsersService {
     newUser.isSuscribed = false;
 
     await this.userRepository.save(newUser);
-    
+
     // Enviar email de confirmación de forma asíncrona para no bloquear el registro
     try {
       await this.notificationService.sendRegistrationConfirmation(newUser);
@@ -47,7 +47,7 @@ export class UsersService {
       console.error('❌ Error enviando email de confirmación:', notificationError.message);
       console.error('⚠️ El usuario se registró correctamente pero no se pudo enviar el email');
     }
-    
+
     return newUser;
   }
 

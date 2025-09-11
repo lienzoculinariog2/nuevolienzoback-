@@ -73,7 +73,7 @@ export class CheckoutIntegrationService {
       }
 
       // 3. Validar stock y calcular totales
-      const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+      const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
         await this.validateCartAndCalculateTotals(cart, checkoutDto);
 
       // 4. Validar código de descuento si se proporciona
@@ -83,7 +83,14 @@ export class CheckoutIntegrationService {
       }
 
       // 5. Crear la orden
-      const order = await this.createOrder(userId, orderItems, subTotal, finalTotal, checkoutDto.shippingAddress, discountCode);
+      const order = await this.createOrder(
+        userId,
+        orderItems,
+        subTotal,
+        finalTotal,
+        checkoutDto.shippingAddress,
+        discountCode,
+      );
 
       // NOTA: El carrito se limpia cuando el pago sea exitoso, no aquí
       // para evitar problemas si el pago falla
@@ -97,14 +104,15 @@ export class CheckoutIntegrationService {
 
       const paymentIntent = await this.paymentsService.createPaymentIntent(paymentIntentDto);
 
-      this.logger.log(`Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`);
+      this.logger.log(
+        `Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`,
+      );
 
       return {
         orderId: order.id,
         paymentIntent,
         message: 'Checkout procesado exitosamente. Procede con el pago.',
       };
-
     } catch (error) {
       this.logger.error(`Error en checkout completo: ${error.message}`);
       throw error;
@@ -129,7 +137,7 @@ export class CheckoutIntegrationService {
       return {
         status: 'no_cart',
         message: 'El usuario no tiene carrito',
-        issues: []
+        issues: [],
       };
     }
 
@@ -137,7 +145,7 @@ export class CheckoutIntegrationService {
       return {
         status: 'empty_cart',
         message: 'El carrito está vacío',
-        issues: []
+        issues: [],
       };
     }
 
@@ -160,7 +168,7 @@ export class CheckoutIntegrationService {
         issues.push(`Item del carrito ${item.id} no tiene producto asociado`);
         invalidItems.push({
           id: item.id,
-          issue: 'no_product'
+          issue: 'no_product',
         });
       } else {
         const product = await this.productsRepository.findOneBy({ id: item.product.id });
@@ -169,7 +177,7 @@ export class CheckoutIntegrationService {
           invalidItems.push({
             id: item.id,
             productId: item.product.id,
-            issue: 'product_not_found'
+            issue: 'product_not_found',
           });
         } else {
           validItems.push({
@@ -177,7 +185,7 @@ export class CheckoutIntegrationService {
             productId: item.product.id,
             productName: product.name,
             quantity: item.quantity,
-            price: product.price
+            price: product.price,
           });
         }
       }
@@ -191,7 +199,7 @@ export class CheckoutIntegrationService {
       invalidItemsCount: invalidItems.length,
       issues,
       validItems,
-      invalidItems
+      invalidItems,
     };
   }
 
@@ -214,7 +222,7 @@ export class CheckoutIntegrationService {
     }
 
     // Validar stock y calcular totales
-    const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+    const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
       await this.validateCartAndCalculateTotals(cart, checkoutDto);
 
     let savings = 0;
@@ -267,7 +275,9 @@ export class CheckoutIntegrationService {
       }
 
       if (product.stock < item.quantity) {
-        throw new BadRequestException(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`);
+        throw new BadRequestException(
+          `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`,
+        );
       }
 
       const itemTotal = item.quantity * product.price;
@@ -352,13 +362,13 @@ export class CheckoutIntegrationService {
       const savedOrder = await manager.save(Orders, order);
 
       // Crear detalles de la orden
-      const orderDetails = orderItems.map(item => 
+      const orderDetails = orderItems.map((item) =>
         this.orderDetailRepository.create({
           order: savedOrder,
           product: { id: item.productId },
           quantity: item.quantity,
           unitPrice: item.price,
-        })
+        }),
       );
 
       await manager.save(OrderDetail, orderDetails);
@@ -381,5 +391,4 @@ export class CheckoutIntegrationService {
       return savedOrder;
     });
   }
-
 }
