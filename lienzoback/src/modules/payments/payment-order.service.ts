@@ -104,7 +104,8 @@ export class PaymentOrderService {
       // Update order status
       this.logger.log('🔄 Actualizando estado de la orden...');
       await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.COMPLETED,
+        status: OrderStatus.PENDING,
+        isPaid: true,
       });
       this.logger.log('✅ Estado de la orden actualizado');
 
