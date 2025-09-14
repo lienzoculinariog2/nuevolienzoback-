@@ -29,7 +29,7 @@ export class CreateDiscountCodesUsedTable1703123456792 implements MigrationInter
           },
           {
             name: 'user_id',
-            type: 'uuid',
+            type: 'character varying',
           },
           {
             name: 'discount_code_id',
