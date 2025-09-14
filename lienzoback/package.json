@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "build:render": "node build-render.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "npm run build && npm run copy:templates && node dist/main",
     "start:dev": "nest start --watch",
@@ -37,7 +38,11 @@
     "debug:checkout": "node debug-checkout-issues.js",
     "test:webhook": "node test-webhook-success.js",
     "check:webhook": "node check-webhook-config.js",
-    "verify:render": "node verify-render-build.js"
+    "verify:render": "node verify-render-build.js",
+    "test:neon": "node test-neon-connection.js",
+    "migrate:neon": "node migrate-to-neon.js",
+    "update:render": "node update-render-config.js",
+    "verify:neon": "node verify-neon-setup.js"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.9.0",
@@ -69,12 +74,13 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^18.4.0",
-    "typeorm": "^0.3.25"
+    "typeorm": "^0.3.25",
+    "@nestjs/cli": "^11.0.0",
+    "typescript": "^5.7.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
     "@types/buffer-to-stream": "^1.0.3",
@@ -95,7 +101,6 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   },
   "jest": {

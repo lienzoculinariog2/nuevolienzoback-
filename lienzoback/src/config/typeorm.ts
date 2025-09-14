@@ -26,7 +26,7 @@ const config = {
   dropSchema: process.env.TYPEORM_DROP === 'true',
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/migrations/*{.ts,.js}'],
-  // Configuración SSL para Render
+  // Configuración SSL para Neon (siempre requerido)
   ssl: isProduction ? { rejectUnauthorized: false } : false,
   // Configuración para manejar dependencias
   extra: {
