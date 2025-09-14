@@ -21,7 +21,7 @@ export class NotificationsService {
   async sendRegistrationConfirmation(user: Users) {
     try {
       this.logger.log(`📧 Intentando enviar email de confirmación a ${user.email}`);
-      
+
       // Validar que el usuario tenga email
       if (!user.email) {
         this.logger.warn(`⚠️ Usuario ${user.id} no tiene email configurado`);
@@ -40,7 +40,7 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error(`❌ Error sending registration email to ${user.email}:`, error.message);
       this.logger.error(`❌ Error details:`, error);
-      
+
       // No lanzar el error para no afectar el registro del usuario
       // Solo loggear el error para debugging
       if (error.code) {
@@ -64,14 +64,15 @@ export class NotificationsService {
       });
       this.logger.log(`Purchase confirmation email sent to ${order.user.email}`);
     } catch (error) {
-      this.logger.error(`Error sending purchase confirmation email to ${order.user.email}:`, error.message);
+      this.logger.error(
+        `Error sending purchase confirmation email to ${order.user.email}:`,
+        error.message,
+      );
       // No lanzar el error para no afectar el proceso de compra
     }
   }
 
-  @Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
-
-  //@Cron('*/10 * * * *') // cada minutos
+  //@Cron('0 0 8 * * 4', { name: 'weekly-newsletter' }) // (seg min hora diaMes mes díaSemana ) lunes 8:00 a.m
   async handleWeeklyNewsletter() {
     this.logger.log('Executing Cron Job: Sending weekly newsletter');
     try {

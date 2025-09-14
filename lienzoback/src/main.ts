@@ -8,10 +8,10 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // 🌐 Configurar prefijo global (removido para compatibilidad con frontend)
   // app.setGlobalPrefix('api');
-  
+
   // Configuración de CORS
   const isProduction = process.env.NODE_ENV === 'production';
   const config = isProduction ? corsConfig.production : corsConfig.development;
@@ -22,7 +22,7 @@ async function bootstrap() {
     .setTitle('Lienzo Culinario')
     .setVersion('1.0')
     .setDescription(
-      "API Design for the Lienzo Culinario Final Project (Henry's Fullstack Developer Program).",
+      "API Design for Lienzo Culinario - Final Project Henry's Fullstack Developer Program.",
     )
     .addBearerAuth()
     .build();
