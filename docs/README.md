@@ -144,7 +144,7 @@ npm run test:cov
 DB_NAME=lienzoCulinario
 DB_HOST=localhost
 DB_PORT=5432
-DB_USERNAME=postgres
+DB_USERNAME=tu_usuario
 DB_PASSWORD=tu_password
 
 # JWT
@@ -167,7 +167,7 @@ AUTH0_AUDIENCE=tu_audience
 
 ## 👥 Contribución
 
-1. Fork el proyecto
+1. Fork del proyecto
 2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
 3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
@@ -175,12 +175,13 @@ AUTH0_AUDIENCE=tu_audience
 
 ## 📝 Licencia
 
-Este proyecto es parte del programa Full Stack Developer de Henry.
+Este proyecto es parte del curso Full Stack Developer de Henry.
 
 ## 🤝 Equipo
 
-- **Desarrolladores**: Equipo Lienzo Culinario G2
-- **Mentor**: Henry Bootcamp
+- **Desarrolladores**: Frontend: Joaquin Curbelo, Bruno Giugno, Agustín Rodríguez.
+                       Backend: Francisco Leonardo Arano Herrera, Catherine Molina Betancourt, Felipe Melo.
+- **Mentor**: David Ezequiel Etchepare 
 - **Proyecto**: Lienzo Culinario
 
 ---
