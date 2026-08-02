@@ -43,7 +43,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     OrdersModule,
     DiscountCodesModule,
     ReviewsModule,
-    DiscountCodesModule,
     IngredientsModule,
     CartModule,
     CheckoutModule,
@@ -54,7 +53,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
   providers: [],
 })
 export class AppModule implements OnModuleInit {
-  usersServiceService: any;
   constructor(
     private readonly categoriesService: CategoriesService,
     private readonly productsService: ProductsService,

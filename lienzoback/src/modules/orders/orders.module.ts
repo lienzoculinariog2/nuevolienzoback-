@@ -13,8 +13,6 @@ import { UsersModule } from '../users/users.module';
 import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart-item.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,14 +25,13 @@ import { NotificationsModule } from '../notifications/notifications.module';
       DiscountCodes,
       Cart,
       CartItem,
-      NotificationsModule,
     ]),
     DiscountCodesModule,
     CartModule,
     UsersModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, NotificationsService],
+  providers: [OrdersService],
   exports: [OrdersService],
 })
 export class OrdersModule {}
