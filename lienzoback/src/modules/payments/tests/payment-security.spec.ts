@@ -10,6 +10,7 @@ import { OrderDetail } from '../../orders/entities/order-detail.entity';
 import { Products } from '../../products/entities/product.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { ConflictException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 describe('Payment Security Tests', () => {
   let paymentsService: PaymentsService;
@@ -57,7 +58,7 @@ describe('Payment Security Tests', () => {
           useValue: mockProductsRepository,
         },
         {
-          provide: 'ConfigService',
+          provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue('sk_test_123'),
           },
