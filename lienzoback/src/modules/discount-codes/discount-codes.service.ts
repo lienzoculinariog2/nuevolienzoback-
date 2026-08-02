@@ -4,7 +4,6 @@ import { UpdateDiscountCodeDto } from './dto/update-discount-code.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DiscountCodes } from './entities/discount-codes.entity';
 import { Like, Repository } from 'typeorm';
-import { nanoid } from 'nanoid';
 import { DiscountCodesUsed } from './entities/discount-codes-used.entity';
 import { DiscountCodesFilterDto } from './dto/discount-codes-filter.dto';
 
