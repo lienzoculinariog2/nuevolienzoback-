@@ -7,7 +7,7 @@
     "assets": [
       {
         "include": "modules/notifications/templates/*.hbs",
-        "outDir": "dist/modules/notifications/templates",
+        "outDir": "dist",
         "watchAssets": true
       }
     ],
