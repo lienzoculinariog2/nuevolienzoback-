@@ -14,21 +14,36 @@ import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-use
 import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { ConfigModule } from '@nestjs/config';
 import { CartModule } from '../cart/cart.module';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment, DiscountCodesUsed, DiscountCodes]),
+    TypeOrmModule.forFeature([
+      Orders,
+      OrderDetail,
+      Products,
+      Payment,
+      DiscountCodesUsed,
+      DiscountCodes,
+    ]),
     forwardRef(() => CartModule),
+    OrdersModule,
   ],
   controllers: [PaymentsController],
   providers: [
-    PaymentsService, 
-    PaymentOrderService, 
-    PaymentCalculationService, 
-    PaymentManagementService, 
-    WebhookMonitoringService
+    PaymentsService,
+    PaymentOrderService,
+    PaymentCalculationService,
+    PaymentManagementService,
+    WebhookMonitoringService,
   ],
-  exports: [PaymentsService, PaymentOrderService, PaymentCalculationService, PaymentManagementService, WebhookMonitoringService],
+  exports: [
+    PaymentsService,
+    PaymentOrderService,
+    PaymentCalculationService,
+    PaymentManagementService,
+    WebhookMonitoringService,
+  ],
 })
 export class PaymentsModule {}

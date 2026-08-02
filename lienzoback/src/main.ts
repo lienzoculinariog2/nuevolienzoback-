@@ -4,10 +4,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import { corsConfig } from './config/cors.config';
-import * as express from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Preserve the exact request bytes required for Stripe signature verification.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // 🌐 Configurar prefijo global (removido para compatibilidad con frontend)
   // app.setGlobalPrefix('api');
@@ -29,10 +29,6 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerDoc);
   SwaggerModule.setup('docs', app, document);
-
-  // 🛡️ IMPORTANTE: Configurar middleware específico para Stripe webhook
-  // Usar express.raw() para preservar el raw body
-  app.use('/payments/webhook', express.raw({ type: 'application/json' }));
 
   app.useGlobalPipes(new ValidationPipe());
 
