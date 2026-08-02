@@ -1,16 +1,32 @@
-import { Body, Controller, Get, Param, Post, Put, Query, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { DiscountCodesService } from './discount-codes.service';
 import { CreateDiscountCodeDto } from './dto/create-discount-code.dto';
 import { UpdateDiscountCodeDto } from './dto/update-discount-code.dto';
 import { DiscountCodes } from './entities/discount-codes.entity';
 import { DiscountCodesFilterDto } from './dto/discount-codes-filter.dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
+import { RolesGuard } from '../common/guard/roles.guard';
+import { HasRoles } from '../decorators/roles';
+import { Roles } from '../users/entities/user.entity';
 
 @Controller('discount-codes')
 export class DiscountCodesController {
   constructor(private readonly discountCodesService: DiscountCodesService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Create a discount code (for administrators only)' })
   async createDiscountCode(@Body() createDto: CreateDiscountCodeDto) {
     const newCode = await this.discountCodesService.createDiscountCode(createDto);
@@ -24,6 +40,8 @@ export class DiscountCodesController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({
     summary: 'Get all discount codes - optional filters (for administrators only)',
   })
@@ -48,12 +66,16 @@ export class DiscountCodesController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Update a discount code by id (for administrators only)' })
   update(@Param('id') id: string, @Body() updateDiscountCodeDto: UpdateDiscountCodeDto) {
     return this.discountCodesService.update(id, updateDiscountCodeDto);
   }
 
   @Put('inactivate/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Inactivate a discount code by id (for administrators only)' })
   async inactivate(@Param('id') id: string) {
     await this.discountCodesService.inactivate(id);
@@ -61,6 +83,8 @@ export class DiscountCodesController {
   }
 
   @Put('activate/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Activate a discount code by id (for administrators only)' })
   async activate(@Param('id') id: string) {
     await this.discountCodesService.activate(id);

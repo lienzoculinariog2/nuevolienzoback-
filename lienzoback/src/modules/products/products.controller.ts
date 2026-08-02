@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -18,12 +19,18 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { GetProductsFilterDto } from './dto/get-productsFilter.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
+import { RolesGuard } from '../common/guard/roles.guard';
+import { HasRoles } from '../decorators/roles';
+import { Roles } from '../users/entities/user.entity';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Create a new product (for administrators only)' })
   @UseInterceptors(FileInterceptor('image'))
   create(
@@ -61,6 +68,8 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Update an existing product (for administrators only)' })
   @UseInterceptors(FileInterceptor('image'))
   update(
@@ -90,13 +99,16 @@ export class ProductsController {
   }
 
   @Put('inactivate/:id')
-  // @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Inactivate a product (for administrators only)' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.inactivateProduct(id);
   }
 
   @Put('activate/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Activate a product (for administrators only)' })
   @ApiResponse({
     status: 200,
