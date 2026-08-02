@@ -1,6 +1,7 @@
 import { IsString, IsOptional, IsIn, IsNumber, IsUUID, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { parseBooleanQueryValue } from '../../common/transforms/parse-boolean-query-value';
 
 export class GetProductsFilterDto {
   @ApiPropertyOptional({ example: 'Pizza', description: 'Buscar productos por nombre' })
@@ -22,7 +23,7 @@ export class GetProductsFilterDto {
 
   @ApiPropertyOptional({ example: true, description: 'Filtrar por productos activos' })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(parseBooleanQueryValue)
   @IsBoolean()
   isActive?: boolean;
 

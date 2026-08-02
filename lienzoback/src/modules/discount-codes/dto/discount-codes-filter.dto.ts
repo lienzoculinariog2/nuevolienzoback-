@@ -1,5 +1,6 @@
 import { IsOptional, IsString, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
+import { parseBooleanQueryValue } from '../../common/transforms/parse-boolean-query-value';
 
 export class DiscountCodesFilterDto {
   @IsOptional()
@@ -8,6 +9,6 @@ export class DiscountCodesFilterDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(parseBooleanQueryValue)
   isActive?: boolean;
 }

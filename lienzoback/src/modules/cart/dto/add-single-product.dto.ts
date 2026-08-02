@@ -1,10 +1,10 @@
-import { IsUUID, IsNumber, IsPositive } from 'class-validator';
+import { IsInt, IsPositive, IsUUID } from 'class-validator';
 
 export class AddSingleProductToCartDto {
   @IsUUID()
   productId: string;
 
-  @IsNumber()
+  @IsInt()
   @IsPositive()
   quantity: number;
 }

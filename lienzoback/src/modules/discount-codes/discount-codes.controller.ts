@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, ValidationPipe } from '@nestjs/common';
 import { DiscountCodesService } from './discount-codes.service';
 import { CreateDiscountCodeDto } from './dto/create-discount-code.dto';
 import { UpdateDiscountCodeDto } from './dto/update-discount-code.dto';
@@ -27,7 +27,9 @@ export class DiscountCodesController {
   @ApiOperation({
     summary: 'Get all discount codes - optional filters (for administrators only)',
   })
-  async findAll(@Query() filterDto: DiscountCodesFilterDto): Promise<DiscountCodes[]> {
+  async findAll(
+    @Query(new ValidationPipe({ transform: true })) filterDto: DiscountCodesFilterDto,
+  ): Promise<DiscountCodes[]> {
     const discounts = await this.discountCodesService.findAll(filterDto);
     return discounts;
   }
