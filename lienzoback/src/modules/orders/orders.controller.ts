@@ -1,8 +1,7 @@
-import { Controller, Post, Get, Param, Body, ParseUUIDPipe, Put, Query } from '@nestjs/common';
+import { Controller, Get, Param, Body, ParseUUIDPipe, Put, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { Orders, OrderStatus } from './entities/order.entity';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
 @ApiTags('orders')

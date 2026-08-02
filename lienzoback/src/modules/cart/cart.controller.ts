@@ -1,12 +1,8 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddSingleProductToCartDto } from './dto/add-single-product.dto';
-import { AddMultipleProductsToCartDto } from './dto/add-multiple-products.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
-import { Orders } from '../orders/entities/order.entity';
-import { CheckoutDto } from '../checkout/dto/check-out.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
-import { CartItem } from './entities/cart-item.entity';
 import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('cart')
