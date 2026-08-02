@@ -4,6 +4,14 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "modules/notifications/templates/*.hbs",
+        "outDir": "dist/modules/notifications/templates",
+        "watchAssets": true
+      }
+    ],
+    "watchAssets": true,
 
     "plugins": [
       {

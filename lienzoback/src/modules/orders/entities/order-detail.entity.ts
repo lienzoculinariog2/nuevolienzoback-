@@ -7,6 +7,12 @@ export class OrderDetail {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ name: 'order_id' })
+  orderId: string;
+
+  @Column({ name: 'product_id' })
+  productId: string;
+
   @Column()
   quantity: number;
 

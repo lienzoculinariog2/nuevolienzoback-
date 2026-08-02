@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Cart } from '../../cart/entities/cart.entity';
 import { CartItem } from '../../cart/entities/cart-item.entity';
 import { Users } from '../../users/entities/user.entity';
@@ -39,10 +39,11 @@ export class CheckoutIntegrationService {
     private readonly cartService: CartService,
     private readonly discountCodesService: DiscountCodesService,
     private readonly paymentsService: PaymentsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
-   * Flujo completo de checkout: validación → creación de orden → payment intent → actualización de stock
+   * Flujo completo de checkout: validación → creación de orden → payment intent
    */
   async processCompleteCheckout(
     userId: string,
@@ -72,7 +73,7 @@ export class CheckoutIntegrationService {
       }
 
       // 3. Validar stock y calcular totales
-      const { orderItems, subTotal, finalTotal, appliedDiscountCode } = 
+      const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
         await this.validateCartAndCalculateTotals(cart, checkoutDto);
 
       // 4. Validar código de descuento si se proporciona
@@ -82,7 +83,17 @@ export class CheckoutIntegrationService {
       }
 
       // 5. Crear la orden
-      const order = await this.createOrder(userId, orderItems, subTotal, finalTotal, checkoutDto.shippingAddress, discountCode);
+      const order = await this.createOrder(
+        userId,
+        orderItems,
+        subTotal,
+        finalTotal,
+        checkoutDto.shippingAddress,
+        discountCode,
+      );
+
+      // NOTA: El carrito se limpia cuando el pago sea exitoso, no aquí
+      // para evitar problemas si el pago falla
 
       // 6. Crear payment intent
       const paymentIntentDto: CreatePaymentIntentDto = {
@@ -93,14 +104,15 @@ export class CheckoutIntegrationService {
 
       const paymentIntent = await this.paymentsService.createPaymentIntent(paymentIntentDto);
 
-      this.logger.log(`Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`);
+      this.logger.log(
+        `Checkout completado exitosamente. Orden: ${order.id}, Payment Intent: ${paymentIntent.paymentIntentId}`,
+      );
 
       return {
         orderId: order.id,
         paymentIntent,
         message: 'Checkout procesado exitosamente. Procede con el pago.',
       };
-
     } catch (error) {
       this.logger.error(`Error en checkout completo: ${error.message}`);
       throw error;
@@ -108,44 +120,132 @@ export class CheckoutIntegrationService {
   }
 
   /**
-   * Procesar pago exitoso: actualizar stock, marcar descuento como usado, vaciar carrito
+   * Diagnosticar carrito del usuario (solo lectura, no modifica datos)
    */
-  async processSuccessfulPayment(orderId: string): Promise<void> {
-    this.logger.log(`Procesando pago exitoso para orden: ${orderId}`);
-
-    try {
-      // 1. Obtener la orden con todos los detalles
-      const order = await this.ordersRepository.findOne({
-        where: { id: orderId },
-        relations: ['orderDetails', 'orderDetails.product', 'user', 'discountCodesUsed', 'discountCodesUsed.discountCode'],
-      });
-
-      if (!order) {
-        throw new NotFoundException(`Orden ${orderId} no encontrada`);
-      }
-
-      // 2. Actualizar stock de productos
-      await this.updateProductStock(order.orderDetails);
-
-      // 3. Marcar código de descuento como usado si existe
-      if (order.discountCodesUsed && order.discountCodesUsed.length > 0) {
-        await this.markDiscountCodeAsUsed(order.discountCodesUsed[0]);
-      }
-
-      // 4. Vaciar el carrito del usuario
-      await this.clearUserCart(order.user.id);
-
-      // 5. Actualizar estado de la orden
-      order.statusOrder = OrderStatus.PAID;
-      order.isPaid = true;
-      await this.ordersRepository.save(order);
-
-      this.logger.log(`Pago procesado exitosamente para orden: ${orderId}`);
-
-    } catch (error) {
-      this.logger.error(`Error procesando pago exitoso: ${error.message}`);
-      throw error;
+  async diagnoseCart(userId: string) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
     }
+
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'user'],
+    });
+
+    if (!cart) {
+      return {
+        status: 'no_cart',
+        message: 'El usuario no tiene carrito',
+        issues: [],
+      };
+    }
+
+    if (cart.items.length === 0) {
+      return {
+        status: 'empty_cart',
+        message: 'El carrito está vacío',
+        issues: [],
+      };
+    }
+
+    const issues: string[] = [];
+    const validItems: Array<{
+      id: string;
+      productId: string;
+      productName: string;
+      quantity: number;
+      price: number;
+    }> = [];
+    const invalidItems: Array<{
+      id: string;
+      productId?: string;
+      issue: string;
+    }> = [];
+
+    for (const item of cart.items) {
+      if (!item.product || !item.product.id) {
+        issues.push(`Item del carrito ${item.id} no tiene producto asociado`);
+        invalidItems.push({
+          id: item.id,
+          issue: 'no_product',
+        });
+      } else {
+        const product = await this.productsRepository.findOneBy({ id: item.product.id });
+        if (!product) {
+          issues.push(`Producto ${item.product.id} no encontrado en la base de datos`);
+          invalidItems.push({
+            id: item.id,
+            productId: item.product.id,
+            issue: 'product_not_found',
+          });
+        } else {
+          validItems.push({
+            id: item.id,
+            productId: item.product.id,
+            productName: product.name,
+            quantity: item.quantity,
+            price: product.price,
+          });
+        }
+      }
+    }
+
+    return {
+      status: issues.length > 0 ? 'has_issues' : 'healthy',
+      message: issues.length > 0 ? 'El carrito tiene problemas' : 'El carrito está saludable',
+      totalItems: cart.items.length,
+      validItemsCount: validItems.length,
+      invalidItemsCount: invalidItems.length,
+      issues,
+      validItems,
+      invalidItems,
+    };
+  }
+
+  /**
+   * Validar carrito y calcular totales (sin crear orden)
+   */
+  async validateCheckout(userId: string, checkoutDto: CheckoutDto) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw new BadRequestException('El carrito está vacío');
+    }
+
+    // Validar stock y calcular totales
+    const { orderItems, subTotal, finalTotal, appliedDiscountCode } =
+      await this.validateCartAndCalculateTotals(cart, checkoutDto);
+
+    let savings = 0;
+    let discountPercentage: number | undefined = undefined;
+
+    // Calcular ahorros si hay descuento
+    if (checkoutDto.discountCode) {
+      const discount = await this.discountCodesService.findOne(checkoutDto.discountCode);
+      if (discount) {
+        savings = subTotal * (discount.percentage / 100);
+        discountPercentage = discount.percentage;
+      }
+    }
+
+    return {
+      message: 'Validación de checkout exitosa',
+      subTotal: subTotal,
+      savings: savings,
+      discountPercentage: discountPercentage ? `${discountPercentage}%` : undefined,
+      finalTotal: finalTotal,
+      orderItems: orderItems,
+      appliedDiscountCode,
+    };
   }
 
   /**
@@ -175,7 +275,9 @@ export class CheckoutIntegrationService {
       }
 
       if (product.stock < item.quantity) {
-        throw new BadRequestException(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`);
+        throw new BadRequestException(
+          `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${item.quantity}`,
+        );
       }
 
       const itemTotal = item.quantity * product.price;
@@ -246,85 +348,47 @@ export class CheckoutIntegrationService {
     shippingAddress: string,
     discountCode?: DiscountCodes,
   ): Promise<Orders> {
-    // Crear la orden
-    const order = this.ordersRepository.create({
-      user: { id: userId },
-      date: new Date(),
-      total: finalTotal,
-      statusOrder: OrderStatus.PENDING,
-      isPaid: false,
-      shippingAddress,
-    });
-
-    const savedOrder = await this.ordersRepository.save(order);
-
-    // Crear detalles de la orden
-    const orderDetails = orderItems.map(item => 
-      this.orderDetailRepository.create({
-        order: savedOrder,
-        product: { id: item.productId },
-        quantity: item.quantity,
-        unitPrice: item.price,
-      })
-    );
-
-    await this.orderDetailRepository.save(orderDetails);
-
-    // Marcar código de descuento como usado si existe
-    if (discountCode) {
-      const discountUsed = this.discountCodesUsedRepository.create({
-        discountCode: { id: discountCode.id },
+    return this.dataSource.transaction(async (manager) => {
+      // Crear la orden
+      const order = this.ordersRepository.create({
         user: { id: userId },
-        order: savedOrder,
-        usedAt: new Date(),
+        totalAmount: finalTotal,
+        status: OrderStatus.PENDING,
+        shippingAddress,
+        date: new Date(),
+        discountCodeId: discountCode?.id, // Almacenar el ID del código de descuento
       });
-      await this.discountCodesUsedRepository.save(discountUsed);
-    }
 
-    return savedOrder;
-  }
+      const savedOrder = await manager.save(Orders, order);
 
-  /**
-   * Actualizar stock de productos
-   */
-  private async updateProductStock(orderDetails: OrderDetail[]): Promise<void> {
-    for (const detail of orderDetails) {
-      const product = await this.productsRepository.findOneBy({ id: detail.product.id });
-      if (product) {
-        product.stock -= detail.quantity;
-        await this.productsRepository.save(product);
-      }
-    }
-  }
+      // Crear detalles de la orden
+      const orderDetails = orderItems.map((item) =>
+        this.orderDetailRepository.create({
+          order: savedOrder,
+          product: { id: item.productId },
+          quantity: item.quantity,
+          unitPrice: item.price,
+        }),
+      );
 
-  /**
-   * Marcar código de descuento como usado
-   */
-  private async markDiscountCodeAsUsed(discountCodeUsed: DiscountCodesUsed): Promise<void> {
-    discountCodeUsed.usedAt = new Date();
-    await this.discountCodesUsedRepository.save(discountCodeUsed);
-  }
+      await manager.save(OrderDetail, orderDetails);
 
-  /**
-   * Vaciar el carrito del usuario completamente
-   */
-  private async clearUserCart(userId: string): Promise<void> {
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['items'],
+      // NOTA: El stock se descuenta cuando el pago sea exitoso, no aquí
+      // para evitar descuentos dobles. Ver payment-order.service.ts
+
+      // NOTA: El código de descuento se marca como usado cuando el pago sea exitoso, no aquí
+      // para evitar marcar códigos como usados si el pago falla. Ver payment-order.service.ts
+      // if (discountCode) {
+      //   const discountUsed = this.discountCodesUsedRepository.create({
+      //     discountCode: { id: discountCode.id },
+      //     user: { id: userId },
+      //     order: savedOrder,
+      //     usedAt: new Date(),
+      //   });
+      //   await manager.save(DiscountCodesUsed, discountUsed);
+      // }
+
+      return savedOrder;
     });
-
-    if (cart && cart.items && cart.items.length > 0) {
-      // Eliminar todos los items del carrito
-      await this.cartItemRepository.remove(cart.items);
-      
-      // Marcar el carrito como inactivo
-      cart.isActive = false;
-      await this.cartRepository.save(cart);
-      
-      this.logger.log(`Carrito vaciado exitosamente para usuario: ${userId}`);
-    } else {
-      this.logger.log(`No se encontró carrito para vaciar para usuario: ${userId}`);
-    }
   }
 }

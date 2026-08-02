@@ -6,37 +6,38 @@ import * as bodyParser from 'body-parser';
 import { corsConfig } from './config/cors.config';
 
 async function bootstrap() {
-  // Stripe verifies webhook signatures against the exact bytes received.
-  // Nest captures those bytes before the JSON parser transforms the payload.
+  // Preserve the exact request bytes required for Stripe signature verification.
   const app = await NestFactory.create(AppModule, { rawBody: true });
-  // Configuración de CORS basada en el entorno
+
+  // 🌐 Configurar prefijo global (removido para compatibilidad con frontend)
+  // app.setGlobalPrefix('api');
+
+  // Configuración de CORS
   const isProduction = process.env.NODE_ENV === 'production';
   const config = isProduction ? corsConfig.production : corsConfig.development;
-
   app.enableCors(config);
 
-  // Log de configuración de CORS para debugging
-  console.log('🔧 CORS Configuration:');
-  console.log('Environment:', process.env.NODE_ENV || 'development');
-  console.log('Frontend URL:', process.env.FRONTEND_URL || 'Not configured');
-  console.log('CORS Origins:', config.origin);
+  // 📄 Swagger
   const swaggerDoc = new DocumentBuilder()
     .setTitle('Lienzo Culinario')
     .setVersion('1.0')
     .setDescription(
-      "API Design for the Lienzo Culinario Final Project (Henry's Fullstack Developer Program).",
+      "API Design for Lienzo Culinario - Final Project Henry's Fullstack Developer Program.",
     )
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerDoc);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
+
+  // Configuración general de body-parser para otras rutas
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
   await app.listen(process.env.PORT ?? 3001);
+  console.log(`🚀 Servidor iniciado en puerto ${process.env.PORT ?? 3001}`);
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
@@ -10,15 +10,25 @@ import { Orders } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { Products } from '../products/entities/product.entity';
 import { Payment } from './entities/payment.entity';
+import { DiscountCodesUsed } from '../discount-codes/entities/discount-codes-used.entity';
+import { DiscountCodes } from '../discount-codes/entities/discount-codes.entity';
 import { ConfigModule } from '@nestjs/config';
+import { CartModule } from '../cart/cart.module';
 import { OrdersModule } from '../orders/orders.module';
-import { RolesGuard } from '../common/guard/roles.guard';
 
 @Module({
   imports: [
     ConfigModule,
+    TypeOrmModule.forFeature([
+      Orders,
+      OrderDetail,
+      Products,
+      Payment,
+      DiscountCodesUsed,
+      DiscountCodes,
+    ]),
+    forwardRef(() => CartModule),
     OrdersModule,
-    TypeOrmModule.forFeature([Orders, OrderDetail, Products, Payment]),
   ],
   controllers: [PaymentsController],
   providers: [
@@ -27,7 +37,6 @@ import { RolesGuard } from '../common/guard/roles.guard';
     PaymentCalculationService,
     PaymentManagementService,
     WebhookMonitoringService,
-    RolesGuard,
   ],
   exports: [
     PaymentsService,

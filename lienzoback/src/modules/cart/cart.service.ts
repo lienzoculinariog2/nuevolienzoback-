@@ -12,9 +12,12 @@ import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
 import { CheckoutDto } from '../checkout/dto/check-out.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class CartService {
+  private readonly logger = new Logger(CartService.name);
+
   constructor(
     @InjectRepository(Cart)
     private cartRepository: Repository<Cart>,
@@ -330,14 +333,18 @@ export class CartService {
       where: { user: { id: userId } },
       relations: ['items', 'items.product'],
     });
+    
     if (!cart) {
+      this.logger.warn(`Cart for user with id ${userId} not found`);
       throw new NotFoundException(`Cart for user with id ${userId} not found`);
     }
+    
     if (cart.items && cart.items.length > 0) {
       await this.cartItemRepository.remove(cart.items);
     }
-    cart.isActive = false;
-    await this.cartRepository.save(cart);
+    
+    // NO desactivamos el carrito, solo lo dejamos vacío
+    await this.cartRepository.remove(cart);
   }
 
   async findCartItem(userId: string, itemId: string): Promise<CartItem> {

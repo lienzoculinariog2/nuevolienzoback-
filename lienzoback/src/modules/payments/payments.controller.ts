@@ -1,31 +1,29 @@
 import {
   Controller,
-  Post,
   Get,
+  Post,
   Body,
   Param,
+  HttpException,
+  HttpStatus,
+  Logger,
   Headers,
   Req,
-  HttpStatus,
-  HttpException,
-  Logger,
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { Request } from 'express';
-import { AuthGuard } from '@nestjs/passport';
-import Stripe from 'stripe';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
-import { PaymentManagementService } from './services/payment-management.service';
-import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
+import { CreatePaymentIntentDto, CreatePaymentForOrderDto } from './dto/create-payment-intent.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import Stripe from 'stripe';
+import type { Request } from 'express';
+import { PaymentManagementService } from './services/payment-management.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
+import { AuthGuard } from '@nestjs/passport';
 import { OrdersService } from '../orders/orders.service';
-import { RolesGuard } from '../common/guard/roles.guard';
-import { HasRoles } from '../decorators/roles';
 import { Roles } from '../users/entities/user.entity';
 import type { RequestWithUser } from '../common/utils/request-with-user.interface';
 
@@ -41,41 +39,36 @@ export class PaymentsController {
     private readonly ordersService: OrdersService,
   ) {}
 
-  @Post('create-payment-intent')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Create a payment intent for Stripe' })
-  @ApiBody({ type: CreatePaymentIntentDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Payment intent created successfully',
-    type: PaymentResponseDto,
-  })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async createPaymentIntent(
-    @Body() createPaymentIntentDto: CreatePaymentIntentDto,
-    @Req() req: RequestWithUser,
-  ): Promise<PaymentResponseDto> {
-    try {
-      await this.assertOrderAccess(createPaymentIntentDto.orderId, req);
-      return await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Error creating payment intent: ${error.message}`);
-      throw new HttpException(
-        {
-          status: HttpStatus.BAD_REQUEST,
-          error: 'Error creating payment intent',
-          message: error.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
+  // 🚫 DESHABILITADO: Crear payment intent genérico (no necesario para flujo de compra)
+  // @Post('create-payment-intent')
+  // @ApiOperation({ summary: 'Create a payment intent for Stripe' })
+  // @ApiBody({ type: CreatePaymentIntentDto })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Payment intent created successfully',
+  //   type: PaymentResponseDto,
+  // })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // async createPaymentIntent(@Body() createPaymentIntentDto: CreatePaymentIntentDto): Promise<PaymentResponseDto> {
+  //   try {
+  //     return await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
+  //   } catch (error) {
+  //     this.logger.error(`Error creating payment intent: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.BAD_REQUEST,
+  //         error: 'Error creating payment intent',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.BAD_REQUEST,
+  //     );
+  //   }
+  // }
 
   @Post('order/:orderId/create-payment')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Create a payment intent for a specific order' })
-  @ApiBody({ type: CreatePaymentIntentDto })
+  @ApiBody({ type: CreatePaymentForOrderDto })
   @ApiResponse({
     status: 201,
     description: 'Payment intent created successfully for order',
@@ -85,17 +78,16 @@ export class PaymentsController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async createPaymentForOrder(
     @Param('orderId') orderId: string,
-    @Body() createPaymentIntentDto: CreatePaymentIntentDto,
+    @Body() createPaymentForOrderDto: CreatePaymentForOrderDto,
     @Req() req: RequestWithUser,
   ): Promise<PaymentResponseDto> {
+    await this.assertOrderAccess(orderId, req);
     try {
-      if (createPaymentIntentDto.orderId !== orderId) {
-        throw new ForbiddenException('El ID de la orden no coincide con la ruta solicitada.');
-      }
-      await this.assertOrderAccess(orderId, req);
-      return await this.paymentOrderService.createPaymentForOrder(orderId, createPaymentIntentDto);
+      return await this.paymentOrderService.createPaymentForOrder(
+        orderId,
+        createPaymentForOrderDto,
+      );
     } catch (error) {
-      if (error instanceof HttpException) throw error;
       this.logger.error(`Error creating payment for order ${orderId}: ${error.message}`);
       throw new HttpException(
         {
@@ -108,172 +100,185 @@ export class PaymentsController {
     }
   }
 
-  @Get('order/:orderId/payment-status')
+  @Get('order-status/:orderId')
   @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get payment status for a specific order' })
+  @ApiOperation({ summary: 'Get payment status for an order' })
   @ApiResponse({ status: 200, description: 'Payment status retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
   async getOrderPaymentStatus(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    await this.assertOrderAccess(orderId, req);
     try {
-      await this.assertOrderAccess(orderId, req);
-      return await this.paymentOrderService.getOrderPaymentStatus(orderId);
+      const paymentStatus = await this.paymentOrderService.getOrderPaymentStatus(orderId);
+      return paymentStatus;
     } catch (error) {
-      if (error instanceof HttpException) throw error;
       this.logger.error(`Error getting payment status for order ${orderId}: ${error.message}`);
       throw new HttpException(
         {
-          status: HttpStatus.NOT_FOUND,
+          status: HttpStatus.BAD_REQUEST,
           error: 'Error getting payment status',
           message: error.message,
         },
-        HttpStatus.NOT_FOUND,
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
 
-  @Get('order/:orderId/payment-history')
+  @Get('order/:orderId/items')
   @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get complete payment history for a specific order' })
-  @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  async getOrderPaymentHistory(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+  @ApiOperation({ summary: 'Get order items information' })
+  @ApiResponse({ status: 200, description: 'Order items retrieved successfully' })
+  async getOrderItems(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    await this.assertOrderAccess(orderId, req);
     try {
-      await this.assertOrderAccess(orderId, req);
-      const paymentHistory = await this.paymentManagementService.getOrderPaymentHistory(orderId);
+      const items = await this.paymentsService.getOrderItems(orderId);
       return {
         orderId,
-        paymentHistory,
-        totalPayments: paymentHistory.length,
-        totalAmount: paymentHistory.reduce((sum, payment) => sum + payment.amount, 0),
-        totalRefunded: paymentHistory.reduce((sum, payment) => sum + payment.refundedAmount, 0),
+        items,
+        itemCount: items.length,
       };
     } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Error getting payment history for order ${orderId}: ${error.message}`);
+      this.logger.error(`Error getting order items for order ${orderId}: ${error.message}`);
       throw new HttpException(
         {
-          status: HttpStatus.NOT_FOUND,
-          error: 'Error getting payment history',
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Error getting order items',
           message: error.message,
         },
-        HttpStatus.NOT_FOUND,
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
+
+  // 🚫 DESHABILITADO: Historial de pagos (no necesario para flujo de compra)
+  // @Get('order/:orderId/payment-history')
+  // @ApiOperation({ summary: 'Get complete payment history for a specific order' })
+  // @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
+  // @ApiResponse({ status: 404, description: 'Order not found' })
+  // async getOrderPaymentHistory(@Param('orderId') orderId: string) {
+  //   try {
+  //     const paymentHistory = await this.paymentManagementService.getOrderPaymentHistory(orderId);
+  //     return {
+  //       orderId,
+  //       paymentHistory,
+  //       totalPayments: paymentHistory.length,
+  //       totalAmount: paymentHistory.reduce((sum, payment) => sum + payment.amount, 0),
+  //       totalRefunded: paymentHistory.reduce((sum, payment) => sum + payment.refundedAmount, 0),
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error getting payment history for order ${orderId}: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.NOT_FOUND,
+  //         error: 'Error getting payment history',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.NOT_FOUND,
+  //     );
+  //   }
+  // }
 
   // 🛡️ SECURITY: Removed manual confirmation endpoint
   // Payment confirmation should only happen through Stripe webhooks
   // This prevents inconsistent states between frontend and webhook processing
 
-  @Get(':paymentIntentId')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @HasRoles(Roles.ADMIN)
-  @ApiOperation({ summary: 'Get payment intent details' })
-  @ApiResponse({ status: 200, description: 'Payment intent retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Payment intent not found' })
-  async getPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
-    try {
-      const paymentIntent = await this.paymentsService.getPaymentIntent(paymentIntentId);
-      return {
-        status: 'success',
-        paymentIntent,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Error retrieving payment intent: ${error.message}`);
-      throw new HttpException(
-        {
-          status: HttpStatus.NOT_FOUND,
-          error: 'Payment intent not found',
-          message: error.message,
-        },
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  }
+  // 🚫 DESHABILITADO: Obtener detalles de payment intent (no necesario para flujo de compra)
+  // @Get(':paymentIntentId')
+  // @ApiOperation({ summary: 'Get payment intent details' })
+  // @ApiResponse({ status: 200, description: 'Payment intent retrieved successfully' })
+  // @ApiResponse({ status: 404, description: 'Payment intent not found' })
+  // async getPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
+  //   try {
+  //     const paymentIntent = await this.paymentsService.getPaymentIntent(paymentIntentId);
+  //     return {
+  //       status: 'success',
+  //       paymentIntent,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error retrieving payment intent: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.NOT_FOUND,
+  //         error: 'Payment intent not found',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.NOT_FOUND,
+  //     );
+  //   }
+  // }
 
-  @Post('cancel/:paymentIntentId')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @HasRoles(Roles.ADMIN)
-  @ApiOperation({ summary: 'Cancel a payment intent' })
-  @ApiResponse({ status: 200, description: 'Payment intent canceled successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async cancelPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
-    try {
-      const paymentIntent = await this.paymentsService.cancelPaymentIntent(paymentIntentId);
-      return {
-        status: 'success',
-        paymentIntent,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Error canceling payment intent: ${error.message}`);
-      throw new HttpException(
-        {
-          status: HttpStatus.BAD_REQUEST,
-          error: 'Error canceling payment intent',
-          message: error.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
+  // 🚫 DESHABILITADO: Cancelar payment intent (no necesario para flujo de compra)
+  // @Post('cancel/:paymentIntentId')
+  // @ApiOperation({ summary: 'Cancel a payment intent' })
+  // @ApiResponse({ status: 200, description: 'Payment intent canceled successfully' })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // async cancelPaymentIntent(@Param('paymentIntentId') paymentIntentId: string) {
+  //   try {
+  //     const paymentIntent = await this.paymentsService.cancelPaymentIntent(paymentIntentId);
+  //     return {
+  //       status: 'success',
+  //       paymentIntent,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error canceling payment intent: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.BAD_REQUEST,
+  //         error: 'Error canceling payment intent',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.BAD_REQUEST,
+  //     );
+  //   }
+  // }
 
-  @Post('refund/:paymentIntentId')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @HasRoles(Roles.ADMIN)
-  @ApiOperation({ summary: 'Create a refund for a payment' })
-  @ApiBody({ type: CreateRefundDto })
-  @ApiResponse({ status: 200, description: 'Refund created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Payment not found' })
-  async createRefund(
-    @Param('paymentIntentId') paymentIntentId: string,
-    @Body() createRefundDto: CreateRefundDto,
-  ) {
-    try {
-      // 🛡️ SECURITY: Get payment from our database first
-      const payment =
-        await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
+  // 🚫 DESHABILITADO: Crear reembolso (no necesario para flujo de compra)
+  // @Post('refund/:paymentIntentId')
+  // @ApiOperation({ summary: 'Create a refund for a payment' })
+  // @ApiBody({ type: CreateRefundDto })
+  // @ApiResponse({ status: 200, description: 'Refund created successfully' })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // @ApiResponse({ status: 404, description: 'Payment not found' })
+  // async createRefund(
+  //   @Param('paymentIntentId') paymentIntentId: string,
+  //   @Body() createRefundDto: CreateRefundDto,
+  // ) {
+  //   try {
+  //     // 🛡️ SECURITY: Get payment from our database first
+  //     const payment = await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
+  //
+  //     // Create refund in Stripe
+  //     const stripeRefund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
+  //
+  //     // 🛡️ SECURITY: Create refund record in our database
+  //     const refundRecord = await this.paymentManagementService.createRefundRecord(
+  //       payment.id,
+  //       stripeRefund,
+  //       'requested_by_customer', // Default reason
+  //     );
 
-      // Create refund in Stripe
-      const stripeRefund = await this.paymentsService.createRefund(
-        paymentIntentId,
-        createRefundDto.amount,
-      );
-
-      // 🛡️ SECURITY: Create refund record in our database
-      const refundRecord = await this.paymentManagementService.createRefundRecord(
-        payment.id,
-        stripeRefund,
-        'requested_by_customer', // Default reason
-      );
-
-      return {
-        status: 'success',
-        refund: {
-          id: refundRecord.id,
-          amount: refundRecord.amount,
-          currency: refundRecord.currency,
-          status: refundRecord.status,
-          stripeRefundId: refundRecord.stripeRefundId,
-          reason: 'requested_by_customer',
-          createdAt: refundRecord.createdAt,
-        },
-      };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Error creating refund: ${error.message}`);
-      throw new HttpException(
-        {
-          status: HttpStatus.BAD_REQUEST,
-          error: 'Error creating refund',
-          message: error.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
+  //     return {
+  //       status: 'success',
+  //       refund: {
+  //         id: refundRecord.id,
+  //         amount: refundRecord.amount,
+  //         currency: refundRecord.currency,
+  //         status: refundRecord.status,
+  //         stripeRefundId: refundRecord.stripeRefundId,
+  //         reason: 'requested_by_customer',
+  //         createdAt: refundRecord.createdAt,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`Error creating refund: ${error.message}`);
+  //     throw new HttpException(
+  //       {
+  //         status: HttpStatus.BAD_REQUEST,
+  //         error: 'Error creating refund',
+  //         message: error.message,
+  //       },
+  //       HttpStatus.BAD_REQUEST,
+  //     );
+  //   }
+  // }
 
   @Post('webhook')
   @ApiOperation({ summary: 'Handle Stripe webhooks' })
@@ -283,24 +288,72 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     try {
-      if (!request.rawBody) {
-        throw new Error('No raw body available');
+      // 🔍 DEBUGGING: Log información detallada del request
+      console.log('🔔 ===== WEBHOOK RECIBIDO =====');
+      console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+      console.log(`🌐 URL: ${request.url}`);
+      console.log(`📋 Method: ${request.method}`);
+      console.log(`📦 Headers: ${JSON.stringify(request.headers, null, 2)}`);
+      console.log(`📏 Raw body exists: ${!!request.rawBody}`);
+      console.log(`📏 Raw body length: ${request.rawBody?.length || 0}`);
+      console.log(`🔑 Signature exists: ${!!signature}`);
+      console.log(`🔑 Signature: ${signature ? signature.substring(0, 50) + '...' : 'MISSING'}`);
+
+      const payload = request.rawBody;
+
+      if (!payload) {
+        console.log('❌ ERROR: No payload available');
+        this.logger.error('❌ ERROR: No payload available');
+        throw new Error('No payload available');
       }
 
-      const event = await this.paymentsService.handleWebhook(request.rawBody, signature);
+      if (!signature) {
+        console.log('❌ ERROR: No stripe-signature header');
+        this.logger.error('❌ ERROR: No stripe-signature header');
+        throw new Error('No stripe-signature header');
+      }
+
+      console.log('🔍 ===== VERIFICANDO WEBHOOK =====');
+      const event = this.paymentsService.handleWebhook(payload, signature);
+      console.log(`✅ Webhook verified successfully: ${event.type}`);
+      console.log(`📋 Event data: ${JSON.stringify(event.data, null, 2)}`);
 
       // 🛡️ Use the new payment management service for all webhook events
+      console.log('🔍 ===== PROCESANDO EVENTO =====');
       await this.handleWebhookEvent(event);
 
+      console.log('✅ ===== WEBHOOK PROCESADO EXITOSAMENTE =====');
       return { received: true };
     } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Webhook error: ${error.message}`);
+      console.log('❌ ===== ERROR EN WEBHOOK =====');
+      console.log(`❌ Error message: ${error.message}`);
+      console.log(`❌ Error stack: ${error.stack}`);
+      console.log(`❌ Error name: ${error.name}`);
+
+      this.logger.error('❌ ===== ERROR EN WEBHOOK =====');
+      this.logger.error(`❌ Error message: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
+      this.logger.error(`❌ Error name: ${error.name}`);
+
+      // 🔍 DEBUGGING: Log más información del error
+      if (error.message.includes('signature')) {
+        console.log('🔍 Signature verification failed - Check webhook secret');
+        this.logger.error('🔍 Signature verification failed - Check webhook secret');
+      }
+
       throw new HttpException(
         {
           status: HttpStatus.BAD_REQUEST,
           error: 'Webhook error',
           message: error.message,
+          details: {
+            hasRawBody: !!request.rawBody,
+            rawBodyLength: request.rawBody?.length || 0,
+            hasSignature: !!signature,
+            timestamp: new Date().toISOString(),
+            errorName: error.name,
+            errorStack: error.stack?.split('\n')[0],
+          },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -326,12 +379,44 @@ export class PaymentsController {
 
   private async handlePaymentIntentEvent(event: Stripe.Event) {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    this.logger.log(`Processing payment intent event: ${event.type} for ${paymentIntent.id}`);
+    this.logger.log(`🔍 ===== PROCESANDO PAYMENT INTENT: ${event.type} =====`);
+    this.logger.log(`📋 Payment Intent ID: ${paymentIntent.id}`);
+    this.logger.log(`💰 Amount: ${paymentIntent.amount}`);
+    this.logger.log(`💱 Currency: ${paymentIntent.currency}`);
+    this.logger.log(`📊 Status: ${paymentIntent.status}`);
 
     try {
-      await this.paymentManagementService.updatePaymentStatus(paymentIntent.id, event);
+      // Handle specific event types using PaymentOrderService directly
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          this.logger.log('🔄 Llamando a handlePaymentSuccess...');
+          await this.paymentOrderService.handlePaymentSuccess(paymentIntent.id);
+          this.logger.log('✅ handlePaymentSuccess completado');
+          break;
+        case 'payment_intent.payment_failed':
+          this.logger.log('🔄 Llamando a handlePaymentFailure...');
+          await this.paymentOrderService.handlePaymentFailure(paymentIntent.id);
+          this.logger.log('✅ handlePaymentFailure completado');
+          break;
+        case 'payment_intent.canceled':
+          // Handle canceled payment
+          this.logger.log(`⚠️ Payment intent ${paymentIntent.id} was canceled`);
+          break;
+        case 'payment_intent.processing':
+          this.logger.log(`⏳ Payment intent ${paymentIntent.id} is processing`);
+          break;
+        case 'payment_intent.requires_action':
+          this.logger.log(`🔄 Payment intent ${paymentIntent.id} requires action`);
+          break;
+        default:
+          this.logger.log(`⚠️ Unhandled payment intent event: ${event.type}`);
+      }
+
+      this.logger.log(`✅ Payment Intent ${paymentIntent.id} procesado exitosamente`);
     } catch (error) {
-      this.logger.error(`Error processing payment intent event: ${error.message}`);
+      this.logger.error(`❌ Error procesando Payment Intent ${paymentIntent.id}: ${error.message}`);
+      this.logger.error(`❌ Error stack: ${error.stack}`);
+      throw error;
     }
   }
 

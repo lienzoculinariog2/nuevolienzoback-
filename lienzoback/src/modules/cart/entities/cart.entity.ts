@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, OneToOne, OneToMany, Column, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, OneToOne, OneToMany, Column, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Users } from '../../users/entities/user.entity';
 import { CartItem } from './cart-item.entity';
 
@@ -7,8 +7,17 @@ export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ default: false })
+  @Column({ name: 'user_id', type: 'varchar' })
+  userId: string;
+
+  @Column({ name: 'isActive', default: true })
   isActive: boolean;
+
+  @CreateDateColumn({ name: 'createdAt' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updatedAt' })
+  updatedAt: Date;
 
   @OneToOne(() => Users)
   @JoinColumn({ name: 'user_id' })

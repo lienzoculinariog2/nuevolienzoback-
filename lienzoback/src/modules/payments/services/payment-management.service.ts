@@ -1,58 +1,53 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment, PaymentStatus, PaymentType, PaymentProvider } from '../entities/payment.entity';
+import { Payment, PaymentStatus, PaymentProvider, PaymentType } from '../entities/payment.entity';
 import { Orders, OrderStatus } from '../../orders/entities/order.entity';
-import { PaymentCalculationService } from './payment-calculation.service';
 import Stripe from 'stripe';
+import { PaymentOrderService } from '../payment-order.service';
 
 @Injectable()
 export class PaymentManagementService {
-  private readonly logger = new Logger(PaymentManagementService.name);
+  private readonly logger = new Logger(PaymentManagementService.name)
 
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(Orders)
     private readonly ordersRepository: Repository<Orders>,
-    private readonly paymentCalculationService: PaymentCalculationService,
+    private readonly paymentOrderService: PaymentOrderService,
   ) {}
 
   /**
-   * Create a new payment record for an order
+   * Create a new payment record
    */
   async createPaymentRecord(orderId: string, stripePaymentIntent: Stripe.PaymentIntent): Promise<Payment> {
-    const orderSummary = await this.paymentCalculationService.getOrderSummary(orderId);
-    
-    const payment = this.paymentRepository.create({
-      orderId,
-      provider: PaymentProvider.STRIPE,
-      type: PaymentType.PAYMENT,
-      status: this.mapStripeStatusToPaymentStatus(stripePaymentIntent.status),
-      amount: orderSummary.amount,
-      currency: orderSummary.currency,
-      stripePaymentIntentId: stripePaymentIntent.id,
-      customerEmail: orderSummary.customerEmail,
-      description: orderSummary.description,
-      metadata: {
-        orderId,
-        items: orderSummary.items,
-        stripePaymentIntent: {
-          id: stripePaymentIntent.id,
-          status: stripePaymentIntent.status,
-          amount: stripePaymentIntent.amount,
-          currency: stripePaymentIntent.currency,
-        },
+    const payment = new Payment();
+    payment.orderId = orderId;
+    payment.stripePaymentIntentId = stripePaymentIntent.id;
+    payment.amount = stripePaymentIntent.amount / 100; // Convert from cents
+    payment.currency = stripePaymentIntent.currency;
+    payment.customerEmail = stripePaymentIntent.receipt_email || '';
+    payment.description = stripePaymentIntent.description || '';
+    payment.status = this.mapStripeStatusToPaymentStatus(stripePaymentIntent.status);
+    payment.provider = PaymentProvider.STRIPE;
+    payment.type = PaymentType.PAYMENT;
+    payment.idempotencyKey = stripePaymentIntent.metadata?.idempotencyKey || '';
+    payment.metadata = {
+      stripePaymentIntent: {
+        id: stripePaymentIntent.id,
+        amount: stripePaymentIntent.amount,
+        currency: stripePaymentIntent.currency,
+        status: stripePaymentIntent.status,
+        created: stripePaymentIntent.created,
       },
-      idempotencyKey: stripePaymentIntent.metadata?.idempotencyKey,
-    });
+    };
 
     return await this.paymentRepository.save(payment);
   }
 
   /**
    * Update payment status based on Stripe webhook events
-   */
   async updatePaymentStatus(paymentIntentId: string, stripeEvent: Stripe.Event): Promise<Payment> {
     const payment = await this.paymentRepository.findOne({
       where: { stripePaymentIntentId: paymentIntentId },
@@ -76,13 +71,13 @@ export class PaymentManagementService {
       },
     };
 
-    // Handle specific event types
+    // Handle specific event types using PaymentOrderService
     switch (stripeEvent.type) {
       case 'payment_intent.succeeded':
-        await this.handlePaymentSuccess(payment);
+        await this.paymentOrderService.handlePaymentSuccess(paymentIntentId);
         break;
       case 'payment_intent.payment_failed':
-        await this.handlePaymentFailure(payment);
+        await this.paymentOrderService.handlePaymentFailure(paymentIntentId);
         break;
       case 'payment_intent.canceled':
         await this.handlePaymentCanceled(payment);
@@ -225,37 +220,12 @@ export class PaymentManagementService {
   }
 
   /**
-   * Handle successful payment
-   */
-  private async handlePaymentSuccess(payment: Payment): Promise<void> {
-    // Update order status
-    await this.ordersRepository.update(payment.orderId, {
-      isPaid: true,
-      statusOrder: OrderStatus.PAID,
-    });
-
-    this.logger.log(`Order ${payment.orderId} marked as paid`);
-  }
-
-  /**
-   * Handle failed payment
-   */
-  private async handlePaymentFailure(payment: Payment): Promise<void> {
-    // Update order status
-    await this.ordersRepository.update(payment.orderId, {
-      statusOrder: OrderStatus.PAYMENT_FAILED,
-    });
-
-    this.logger.log(`Order ${payment.orderId} marked as payment failed`);
-  }
-
-  /**
    * Handle canceled payment
    */
   private async handlePaymentCanceled(payment: Payment): Promise<void> {
     // Update order status
     await this.ordersRepository.update(payment.orderId, {
-      statusOrder: OrderStatus.CANCELED,
+      status: OrderStatus.CANCELLED,
     });
 
     this.logger.log(`Order ${payment.orderId} marked as canceled`);

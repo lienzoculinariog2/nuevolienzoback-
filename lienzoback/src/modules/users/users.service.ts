@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Users, Roles, Diet } from './entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    private readonly notificationService: NotificationsService,
   ) {}
 
   async findAll(): Promise<Users[]> {
@@ -36,6 +38,16 @@ export class UsersService {
     newUser.isSuscribed = false;
 
     await this.userRepository.save(newUser);
+
+    // Enviar email de confirmación de forma asíncrona para no bloquear el registro
+    try {
+      await this.notificationService.sendRegistrationConfirmation(newUser);
+    } catch (notificationError) {
+      // Loggear el error pero no fallar el registro del usuario
+      console.error('❌ Error enviando email de confirmación:', notificationError.message);
+      console.error('⚠️ El usuario se registró correctamente pero no se pudo enviar el email');
+    }
+
     return newUser;
   }
 

@@ -18,39 +18,44 @@ import { Roles, Users } from './entities/user.entity';
 import type { RequestWithUser } from '../common/utils/request-with-user.interface';
 import { RolesGuard } from '../common/guard/roles.guard';
 import { HasRoles } from '../decorators/roles';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all users (for administrators only)' })
   //@UseGuards(AuthGuard('jwt'))
   async findAll(): Promise<Users[]> {
     return this.usersService.findAll();
   }
 
   @Post()
+  @ApiOperation({ summary: 'Register/Create a new user - Auth0' })
   @UseGuards(AuthGuard('jwt'))
   async create(@Body() createUserDto: CreateUserDto): Promise<Users> {
     return this.usersService.create(createUserDto);
   }
 
-  @Post('test')
-  async createTestUser(): Promise<Users> {
-    const testUserDto: CreateUserDto = {
-      id: 'test-user-' + Date.now(),
-      email: 'test@example.com',
-    };
-    return this.usersService.create(testUserDto);
-  }
+  // @Post('test')
+  // async createTestUser(): Promise<Users> {
+  //   const testUserDto: CreateUserDto = {
+  //     id: 'test-user-' + Date.now(),
+  //     email: 'test@example.com',
+  //   };
+  //   return this.usersService.create(testUserDto);
+  // }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a user by their id' })
   @UseGuards(AuthGuard('jwt'))
   async findOne(@Param('id') id: string): Promise<Users> {
     return this.usersService.findOneById(id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a user by their id' })
   @UseGuards(AuthGuard('jwt'))
   async update(
     @Param('id') id: string,
@@ -67,6 +72,7 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @HasRoles(Roles.ADMIN)
   @Patch(':id/role')
+  @ApiOperation({ summary: "Update a user's role (for administrators only)" })
   async updateRole(
     @Param('id') id: string,
     @Body('newRole') newRole: Roles, // 👈 viene en el body

@@ -7,11 +7,10 @@ import { Payment } from 'src/modules/payments/entities/payment.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
-  PAID = 'paid',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELED = 'canceled',
-  PAYMENT_FAILED = 'payment_failed',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  FAILED = 'failed',
 }
 
 @Entity({ name: 'orders' })
@@ -19,32 +18,35 @@ export class Orders {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'date' })
-  date: Date;
+  @Column({ name: 'date', type: 'date', default: () => 'CURRENT_DATE' })
+  date: Date = new Date();
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  total: number;
+  @Column({ name: 'user_id' })
+  userId: string;
 
-  @Column({ name: 'discount_id', type: 'int', nullable: true })
-  discountId: number;
+  @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
+  totalAmount: number;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
-  statusOrder: OrderStatus;
+  @Column({ name: 'statusOrder', type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+  status: OrderStatus;
 
-  @Column({ name: 'is_paid', default: false })
+  @Column({ name: 'shipping_address', type: 'character varying', nullable: true })
+  shippingAddress: any;
+
+  @Column({ name: 'is_paid', type: 'boolean', default: false })
   isPaid: boolean;
 
-  @Column({ name: 'stripe_payment_intent_id', nullable: true })
+  @Column({ name: 'stripe_payment_intent_id', type: 'character varying', nullable: true })
   stripePaymentIntentId: string;
 
-  @Column({ name: 'stripe_charge_id', nullable: true })
+  @Column({ name: 'stripe_charge_id', type: 'character varying', nullable: true })
   stripeChargeId: string;
 
-  @Column({ name: 'payment_status', nullable: true })
+  @Column({ name: 'payment_status', type: 'character varying', nullable: true })
   paymentStatus: string;
 
-  @Column({ name: 'shipping_address', nullable: true })
-  shippingAddress: string;
+  @Column({ name: 'discount_code_id', type: 'uuid', nullable: true })
+  discountCodeId: string;
 
   @ManyToOne(() => Users, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })

@@ -18,8 +18,7 @@ export class DiscountCodesService {
   ) {}
 
   async createDiscountCode(createDto: CreateDiscountCodeDto): Promise<DiscountCodes> {
-    const randomSuffix = nanoid(4);
-    const code = `${createDto.name.toUpperCase()}-${randomSuffix}`;
+    const code = `${createDto.name.toUpperCase()}-LIENZO`;
     const { percentage, validUntil } = createDto;
 
     const newDiscount = this.discountCodesRepository.create({
@@ -83,7 +82,7 @@ export class DiscountCodesService {
     });
 
     if (!discount) {
-      throw new NotFoundException('Discount code not found or is not valid.');
+      throw new NotFoundException('Descuento inválido');
     }
 
     const currentDate = new Date();

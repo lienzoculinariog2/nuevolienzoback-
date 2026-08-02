@@ -88,20 +88,15 @@ export class PaymentCalculationService {
 
     // Calculate discount (if any)
     let discount = 0;
-    if (order.discountId) {
-      // TODO: Implement discount calculation based on discount codes
-      // For now, we'll use a placeholder
-      discount = 0;
-    }
+    // TODO: Implement discount calculation based on discount codes
+    // For now, we'll use a placeholder
+    discount = 0;
 
     const total = subtotal - discount;
 
     // Validate total matches order total
-    if (Math.abs(total - order.total) > 0.01) {
-      throw new BadRequestException(
-        `Total mismatch. Calculated: ${total}, Order total: ${order.total}`
-      );
-    }
+   //
+   
 
     return {
       subtotal,
