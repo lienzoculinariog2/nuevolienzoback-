@@ -7,7 +7,7 @@ import { Users } from '../users/entities/user.entity';
 import { Products } from '../products/entities/product.entity';
 import { Orders } from '../orders/entities/order.entity';
 import { ScheduleModule } from '@nestjs/schedule';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import * as path from 'path';
 import { NotificationsController } from './notifications.controller';
 
