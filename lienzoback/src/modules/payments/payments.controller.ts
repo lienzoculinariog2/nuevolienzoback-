@@ -9,7 +9,10 @@ import {
   Logger,
   Headers,
   Req,
+  UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { PaymentOrderService } from './payment-order.service';
@@ -19,6 +22,10 @@ import Stripe from 'stripe';
 import type { Request } from 'express';
 import { PaymentManagementService } from './services/payment-management.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { OrdersService } from '../orders/orders.service';
+import { Roles } from '../users/entities/user.entity';
+import type { RequestWithUser } from '../common/utils/request-with-user.interface';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -29,6 +36,7 @@ export class PaymentsController {
     private readonly paymentsService: PaymentsService,
     private readonly paymentOrderService: PaymentOrderService,
     private readonly paymentManagementService: PaymentManagementService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   // 🚫 DESHABILITADO: Crear payment intent genérico (no necesario para flujo de compra)
@@ -58,6 +66,7 @@ export class PaymentsController {
   // }
 
   @Post('order/:orderId/create-payment')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Create a payment intent for a specific order' })
   @ApiBody({ type: CreatePaymentForOrderDto })
   @ApiResponse({
@@ -70,9 +79,14 @@ export class PaymentsController {
   async createPaymentForOrder(
     @Param('orderId') orderId: string,
     @Body() createPaymentForOrderDto: CreatePaymentForOrderDto,
+    @Req() req: RequestWithUser,
   ): Promise<PaymentResponseDto> {
+    await this.assertOrderAccess(orderId, req);
     try {
-      return await this.paymentOrderService.createPaymentForOrder(orderId, createPaymentForOrderDto);
+      return await this.paymentOrderService.createPaymentForOrder(
+        orderId,
+        createPaymentForOrderDto,
+      );
     } catch (error) {
       this.logger.error(`Error creating payment for order ${orderId}: ${error.message}`);
       throw new HttpException(
@@ -87,9 +101,11 @@ export class PaymentsController {
   }
 
   @Get('order-status/:orderId')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get payment status for an order' })
   @ApiResponse({ status: 200, description: 'Payment status retrieved successfully' })
-  async getOrderPaymentStatus(@Param('orderId') orderId: string) {
+  async getOrderPaymentStatus(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    await this.assertOrderAccess(orderId, req);
     try {
       const paymentStatus = await this.paymentOrderService.getOrderPaymentStatus(orderId);
       return paymentStatus;
@@ -107,9 +123,11 @@ export class PaymentsController {
   }
 
   @Get('order/:orderId/items')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get order items information' })
   @ApiResponse({ status: 200, description: 'Order items retrieved successfully' })
-  async getOrderItems(@Param('orderId') orderId: string) {
+  async getOrderItems(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    await this.assertOrderAccess(orderId, req);
     try {
       const items = await this.paymentsService.getOrderItems(orderId);
       return {
@@ -226,10 +244,10 @@ export class PaymentsController {
   //   try {
   //     // 🛡️ SECURITY: Get payment from our database first
   //     const payment = await this.paymentManagementService.getPaymentByStripeIntentId(paymentIntentId);
-  //     
+  //
   //     // Create refund in Stripe
   //     const stripeRefund = await this.paymentsService.createRefund(paymentIntentId, createRefundDto.amount);
-  //     
+  //
   //     // 🛡️ SECURITY: Create refund record in our database
   //     const refundRecord = await this.paymentManagementService.createRefundRecord(
   //       payment.id,
@@ -266,7 +284,7 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Handle Stripe webhooks' })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
   async handleWebhook(
-    @Req() request: Request,
+    @Req() request: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string,
   ) {
     try {
@@ -276,14 +294,12 @@ export class PaymentsController {
       console.log(`🌐 URL: ${request.url}`);
       console.log(`📋 Method: ${request.method}`);
       console.log(`📦 Headers: ${JSON.stringify(request.headers, null, 2)}`);
-      console.log(`📏 Raw body exists: ${!!request.body}`);
-      console.log(`📏 Raw body length: ${request.body?.length || 0}`);
-      console.log(`📏 Raw body type: ${typeof request.body}`);
+      console.log(`📏 Raw body exists: ${!!request.rawBody}`);
+      console.log(`📏 Raw body length: ${request.rawBody?.length || 0}`);
       console.log(`🔑 Signature exists: ${!!signature}`);
       console.log(`🔑 Signature: ${signature ? signature.substring(0, 50) + '...' : 'MISSING'}`);
 
-      // 🛡️ Use request.body as Buffer (express.raw() provides it as Buffer)
-      const payload = request.body as Buffer;
+      const payload = request.rawBody;
 
       if (!payload) {
         console.log('❌ ERROR: No payload available');
@@ -298,7 +314,7 @@ export class PaymentsController {
       }
 
       console.log('🔍 ===== VERIFICANDO WEBHOOK =====');
-      const event = await this.paymentsService.handleWebhook(payload, signature);
+      const event = this.paymentsService.handleWebhook(payload, signature);
       console.log(`✅ Webhook verified successfully: ${event.type}`);
       console.log(`📋 Event data: ${JSON.stringify(event.data, null, 2)}`);
 
@@ -313,31 +329,31 @@ export class PaymentsController {
       console.log(`❌ Error message: ${error.message}`);
       console.log(`❌ Error stack: ${error.stack}`);
       console.log(`❌ Error name: ${error.name}`);
-      
+
       this.logger.error('❌ ===== ERROR EN WEBHOOK =====');
       this.logger.error(`❌ Error message: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
       this.logger.error(`❌ Error name: ${error.name}`);
-      
+
       // 🔍 DEBUGGING: Log más información del error
       if (error.message.includes('signature')) {
         console.log('🔍 Signature verification failed - Check webhook secret');
         this.logger.error('🔍 Signature verification failed - Check webhook secret');
       }
-      
+
       throw new HttpException(
         {
           status: HttpStatus.BAD_REQUEST,
           error: 'Webhook error',
           message: error.message,
           details: {
-            hasRawBody: !!request.body,
-            rawBodyLength: request.body?.length || 0,
+            hasRawBody: !!request.rawBody,
+            rawBodyLength: request.rawBody?.length || 0,
             hasSignature: !!signature,
             timestamp: new Date().toISOString(),
             errorName: error.name,
-            errorStack: error.stack?.split('\n')[0]
-          }
+            errorStack: error.stack?.split('\n')[0],
+          },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -354,7 +370,7 @@ export class PaymentsController {
         await this.handlePaymentIntentEvent(event);
         break;
       case 'charge.refunded':
-        await this.handleRefundEvent(event);
+        this.handleRefundEvent(event);
         break;
       default:
         this.logger.log(`Unhandled event type: ${event.type}`);
@@ -368,7 +384,7 @@ export class PaymentsController {
     this.logger.log(`💰 Amount: ${paymentIntent.amount}`);
     this.logger.log(`💱 Currency: ${paymentIntent.currency}`);
     this.logger.log(`📊 Status: ${paymentIntent.status}`);
-    
+
     try {
       // Handle specific event types using PaymentOrderService directly
       switch (event.type) {
@@ -395,7 +411,7 @@ export class PaymentsController {
         default:
           this.logger.log(`⚠️ Unhandled payment intent event: ${event.type}`);
       }
-      
+
       this.logger.log(`✅ Payment Intent ${paymentIntent.id} procesado exitosamente`);
     } catch (error) {
       this.logger.error(`❌ Error procesando Payment Intent ${paymentIntent.id}: ${error.message}`);
@@ -404,16 +420,27 @@ export class PaymentsController {
     }
   }
 
-  private async handleRefundEvent(event: Stripe.Event) {
+  private handleRefundEvent(event: Stripe.Event): void {
     const charge = event.data.object as Stripe.Charge;
     this.logger.log(`Processing refund event for charge: ${charge.id}`);
-    
+
     try {
       // Find the payment by charge ID and create refund record
       // This would need to be implemented based on your charge tracking
       this.logger.log(`Refund processed for charge: ${charge.id}`);
     } catch (error) {
       this.logger.error(`Error processing refund event: ${error.message}`);
+    }
+  }
+
+  private async assertOrderAccess(orderId: string, req: RequestWithUser): Promise<void> {
+    if (req.user.roles === Roles.ADMIN) {
+      return;
+    }
+
+    const order = await this.ordersService.findOrderById(orderId);
+    if (order.user.id !== req.user.sub) {
+      throw new ForbiddenException('No tienes permiso para acceder a esta orden.');
     }
   }
 }
