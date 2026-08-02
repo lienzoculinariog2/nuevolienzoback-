@@ -1,11 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsUUID, IsNumber, IsPositive, IsArray, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, IsPositive, IsUUID, ValidateNested } from 'class-validator';
 
 export class CartItemDto {
   @IsUUID()
   productId: string;
 
-  @IsNumber()
+  @IsInt()
   @IsPositive()
   quantity: number;
 }

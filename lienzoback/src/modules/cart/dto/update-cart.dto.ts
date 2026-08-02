@@ -1,11 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsUUID, IsNumber, IsPositive, IsArray, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, IsUUID, Min, ValidateNested } from 'class-validator';
 
 export class UpdateCartItemDto {
   @IsUUID()
   itemId: string;
 
-  @IsNumber()
+  @IsInt()
+  @Min(0)
   quantity: number;
 }
 

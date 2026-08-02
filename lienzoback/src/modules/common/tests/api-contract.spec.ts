@@ -3,6 +3,8 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CartController } from '../../cart/cart.controller';
 import { CartService } from '../../cart/cart.service';
+import { DiscountCodesController } from '../../discount-codes/discount-codes.controller';
+import { DiscountCodesService } from '../../discount-codes/discount-codes.service';
 import { OrdersController } from '../../orders/orders.controller';
 import { OrdersService } from '../../orders/orders.service';
 import { ProductsController } from '../../products/products.controller';
@@ -52,19 +54,26 @@ describe('Frontend API contracts', () => {
 
   const cartService = {
     getCart: jest.fn().mockResolvedValue(cartSummary),
+    addSingleProductToCart: jest.fn().mockResolvedValue(cartSummary),
+    updateCartItems: jest.fn().mockResolvedValue(cartSummary),
   };
 
   const ordersService = {
     getUserOrders: jest.fn().mockResolvedValue([order]),
   };
 
+  const discountCodesService = {
+    findAll: jest.fn().mockResolvedValue([]),
+  };
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      controllers: [ProductsController, CartController, OrdersController],
+      controllers: [ProductsController, CartController, OrdersController, DiscountCodesController],
       providers: [
         { provide: ProductsService, useValue: productsService },
         { provide: CartService, useValue: cartService },
         { provide: OrdersService, useValue: ordersService },
+        { provide: DiscountCodesService, useValue: discountCodesService },
       ],
     }).compile();
 
@@ -100,11 +109,60 @@ describe('Frontend API contracts', () => {
     );
   });
 
+  it('preserves false when filtering inactive products', async () => {
+    await request(app.getHttpServer()).get('/products?isActive=false').expect(200);
+
+    expect(productsService.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: false }),
+    );
+  });
+
+  it('preserves false when filtering inactive discount codes', async () => {
+    await request(app.getHttpServer()).get('/discount-codes?isActive=false').expect(200);
+
+    expect(discountCodesService.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: false }),
+    );
+  });
+
   it('preserves the user cart response used by the frontend', async () => {
     const response = await request(app.getHttpServer()).get('/cart/auth0-user-id').expect(200);
 
     expect(response.body).toEqual(cartSummary);
     expect(cartService.getCart).toHaveBeenCalledWith('auth0-user-id');
+  });
+
+  it('accepts the existing add-to-cart request contract', async () => {
+    const payload = { productId: product.id, quantity: 2 };
+
+    const response = await request(app.getHttpServer())
+      .post('/cart/addsingle/auth0-user-id')
+      .send(payload)
+      .expect(201);
+
+    expect(response.body).toEqual(cartSummary);
+    expect(cartService.addSingleProductToCart).toHaveBeenCalledWith('auth0-user-id', payload);
+  });
+
+  it.each([
+    { productId: 'not-a-uuid', quantity: 2 },
+    { productId: product.id, quantity: 0 },
+    { productId: product.id, quantity: 1.5 },
+  ])('rejects an invalid add-to-cart payload: %p', async (payload) => {
+    await request(app.getHttpServer())
+      .post('/cart/addsingle/auth0-user-id')
+      .send(payload)
+      .expect(400);
+  });
+
+  it('keeps quantity zero valid when the frontend removes an item through cart update', async () => {
+    const payload = {
+      updates: [{ itemId: cartSummary.items[0].id, quantity: 0 }],
+    };
+
+    await request(app.getHttpServer()).put('/cart/auth0-user-id').send(payload).expect(200);
+
+    expect(cartService.updateCartItems).toHaveBeenCalledWith('auth0-user-id', payload);
   });
 
   it('preserves the user orders response used by the frontend', async () => {
