@@ -1,11 +1,24 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddSingleProductToCartDto } from './dto/add-single-product.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { FullCartSummaryDto } from './dto/full-Cart-Summary-dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
+import { UserOwnershipGuard } from '../common/guard/user-ownership.guard';
 
 @Controller('cart')
+@UseGuards(JwtAuthGuard, UserOwnershipGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
