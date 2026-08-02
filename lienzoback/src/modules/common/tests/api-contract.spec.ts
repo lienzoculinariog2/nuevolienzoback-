@@ -9,6 +9,9 @@ import { OrdersController } from '../../orders/orders.controller';
 import { OrdersService } from '../../orders/orders.service';
 import { ProductsController } from '../../products/products.controller';
 import { ProductsService } from '../../products/products.service';
+import { JwtAuthGuard } from '../guard/jwt-auth.guard';
+import { RolesGuard } from '../guard/roles.guard';
+import { UserOwnershipGuard } from '../guard/user-ownership.guard';
 
 describe('Frontend API contracts', () => {
   let app: INestApplication;
@@ -75,7 +78,14 @@ describe('Frontend API contracts', () => {
         { provide: OrdersService, useValue: ordersService },
         { provide: DiscountCodesService, useValue: discountCodesService },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(UserOwnershipGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(
