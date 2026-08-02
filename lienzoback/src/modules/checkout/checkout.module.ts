@@ -15,6 +15,7 @@ import { DiscountCodesModule } from '../discount-codes/discount-codes.module';
 import { CartModule } from '../cart/cart.module';
 import { OrdersModule } from '../orders/orders.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { RolesGuard } from '../common/guard/roles.guard';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { PaymentsModule } from '../payments/payments.module';
     PaymentsModule,
   ],
   controllers: [CheckoutController],
-  providers: [CheckoutService, CheckoutIntegrationService],
+  providers: [CheckoutService, CheckoutIntegrationService, RolesGuard],
   exports: [CheckoutService, CheckoutIntegrationService],
 })
 export class CheckoutModule {}
