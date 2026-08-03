@@ -288,16 +288,9 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
   ) {
     try {
-      // 🔍 DEBUGGING: Log información detallada del request
-      console.log('🔔 ===== WEBHOOK RECIBIDO =====');
-      console.log(`📅 Timestamp: ${new Date().toISOString()}`);
-      console.log(`🌐 URL: ${request.url}`);
-      console.log(`📋 Method: ${request.method}`);
-      console.log(`📦 Headers: ${JSON.stringify(request.headers, null, 2)}`);
-      console.log(`📏 Raw body exists: ${!!request.rawBody}`);
-      console.log(`📏 Raw body length: ${request.rawBody?.length || 0}`);
-      console.log(`🔑 Signature exists: ${!!signature}`);
-      console.log(`🔑 Signature: ${signature ? signature.substring(0, 50) + '...' : 'MISSING'}`);
+      this.logger.log(
+        `Stripe webhook received (rawBody=${!!request.rawBody}, bytes=${request.rawBody?.length || 0}, signature=${!!signature})`,
+      );
 
       const payload = request.rawBody;
 
@@ -313,10 +306,8 @@ export class PaymentsController {
         throw new Error('No stripe-signature header');
       }
 
-      console.log('🔍 ===== VERIFICANDO WEBHOOK =====');
       const event = this.paymentsService.handleWebhook(payload, signature);
-      console.log(`✅ Webhook verified successfully: ${event.type}`);
-      console.log(`📋 Event data: ${JSON.stringify(event.data, null, 2)}`);
+      this.logger.log(`Stripe webhook verified: ${event.id} (${event.type})`);
 
       // 🛡️ Use the new payment management service for all webhook events
       console.log('🔍 ===== PROCESANDO EVENTO =====');

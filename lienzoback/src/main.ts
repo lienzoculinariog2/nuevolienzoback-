@@ -2,12 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-import * as bodyParser from 'body-parser';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { corsConfig } from './config/cors.config';
 
 async function bootstrap() {
   // Preserve the exact request bytes required for Stripe signature verification.
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+
+  // Use Nest's parsers so rawBody remains available for Stripe signature verification.
+  app.useBodyParser('json', { limit: '10mb' });
+  app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
 
   // 🌐 Configurar prefijo global (removido para compatibilidad con frontend)
   // app.setGlobalPrefix('api');
@@ -31,10 +35,6 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
-
-  // Configuración general de body-parser para otras rutas
-  app.use(bodyParser.json({ limit: '10mb' }));
-  app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
   await app.listen(process.env.PORT ?? 3001);
   console.log(`🚀 Servidor iniciado en puerto ${process.env.PORT ?? 3001}`);
