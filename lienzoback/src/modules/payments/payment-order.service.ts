@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Orders, OrderStatus } from '../orders/entities/order.entity';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { OrderDetail } from '../orders/entities/order-detail.entity';
@@ -32,6 +32,7 @@ export class PaymentOrderService {
     private readonly paymentsService: PaymentsService,
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createPaymentForOrder(orderId: string, createPaymentForOrderDto: CreatePaymentForOrderDto) {
@@ -49,8 +50,9 @@ export class PaymentOrderService {
         description: createPaymentForOrderDto.description,
         idempotencyKey: createPaymentForOrderDto.idempotencyKey,
       };
-      
-      const paymentResponse = await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
+
+      const paymentResponse =
+        await this.paymentsService.createPaymentIntent(createPaymentIntentDto);
 
       // Create payment record
       const payment = this.paymentRepository.create({
@@ -65,7 +67,9 @@ export class PaymentOrderService {
 
       await this.paymentRepository.save(payment);
 
-      this.logger.log(`Payment intent created for order ${orderId}: ${paymentResponse.paymentIntentId}`);
+      this.logger.log(
+        `Payment intent created for order ${orderId}: ${paymentResponse.paymentIntentId}`,
+      );
 
       return paymentResponse;
     } catch (error) {
@@ -78,61 +82,71 @@ export class PaymentOrderService {
     try {
       this.logger.log(`🔍 ===== MANEJANDO PAGO EXITOSO =====`);
       this.logger.log(`📋 Payment Intent ID: ${paymentIntentId}`);
-      
-      // Find payment by payment intent ID
-      this.logger.log('🔍 Buscando pago en la base de datos...');
-      const payment = await this.paymentRepository.findOne({
-        where: { stripePaymentIntentId: paymentIntentId },
-        relations: ['order'],
+
+      let userId: string | undefined;
+      const processed = await this.dataSource.transaction(async (manager) => {
+        const payment = await manager.getRepository(Payment).findOne({
+          where: { stripePaymentIntentId: paymentIntentId },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!payment) {
+          this.logger.warn(`⚠️ No payment found for payment intent: ${paymentIntentId}`);
+          return false;
+        }
+
+        // Stripe can deliver the same event more than once. The row lock and this
+        // persisted state check make all order side effects exactly-once.
+        if (payment.status === PaymentStatus.SUCCEEDED) {
+          this.logger.log(
+            `Payment ${payment.id} was already processed; skipping duplicate webhook`,
+          );
+          return false;
+        }
+
+        const order = await manager.findOne(Orders, {
+          where: { id: payment.orderId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!order) {
+          throw new Error(`Order with ID ${payment.orderId} not found`);
+        }
+
+        await this.updateProductStock(payment.orderId, manager);
+        await this.markDiscountCodeAsUsed(payment.orderId, manager);
+
+        order.status = OrderStatus.PENDING;
+        order.isPaid = true;
+        await manager.save(Orders, order);
+
+        payment.status = PaymentStatus.SUCCEEDED;
+        payment.processedAt = new Date();
+        await manager.save(Payment, payment);
+
+        userId = order.userId;
+        return true;
       });
 
-      if (!payment) {
-        this.logger.warn(`⚠️ No payment found for payment intent: ${paymentIntentId}`);
+      if (!processed) {
         return;
       }
 
-      this.logger.log(`✅ Pago encontrado: ID ${payment.id}, Order ID: ${payment.orderId}`);
-
-      // Update payment status
-      this.logger.log('🔄 Actualizando estado del pago...');
-      await this.paymentRepository.update(payment.id, {
-        status: PaymentStatus.SUCCEEDED,
-        processedAt: new Date(),
-      });
-      this.logger.log('✅ Estado del pago actualizado');
-
-      // Update order status
-      this.logger.log('🔄 Actualizando estado de la orden...');
-      await this.ordersRepository.update(payment.orderId, {
-        status: OrderStatus.PENDING,
-        isPaid: true,
-      });
-      this.logger.log('✅ Estado de la orden actualizado');
-
-      // Update product stock
-      this.logger.log('🔄 Actualizando stock de productos...');
-      await this.updateProductStock(payment.orderId);
-      this.logger.log('✅ Stock de productos actualizado');
-
-      // Mark discount code as used (if any)
-      this.logger.log('🔄 Marcando código de descuento como usado...');
-      await this.markDiscountCodeAsUsed(payment.orderId);
-      this.logger.log('✅ Código de descuento marcado como usado');
-
       // Clear the user's cart after successful payment
       try {
-        this.logger.log(`🔄 Limpiando carrito para usuario: ${payment.order.userId}`);
-        await this.cartService.clearCart(payment.order.userId);
-        this.logger.log(`✅ Carrito limpiado para usuario ${payment.order.userId} después del pago exitoso`);
+        this.logger.log(`🔄 Limpiando carrito para usuario: ${userId}`);
+        await this.cartService.clearCart(userId!);
+        this.logger.log(`✅ Carrito limpiado para usuario ${userId} después del pago exitoso`);
       } catch (cartError) {
-        this.logger.error(`❌ ERROR CRÍTICO: Failed to clear cart for user ${payment.order.userId}: ${cartError.message}`);
+        this.logger.error(
+          `❌ ERROR CRÍTICO: Failed to clear cart for user ${userId}: ${cartError.message}`,
+        );
         this.logger.error(`❌ Error stack: ${cartError.stack}`);
         // Don't throw error here as the payment was successful, but log it as error
         // TODO: Implement retry mechanism or manual cart clearing
       }
 
       this.logger.log(`✅ ===== PAGO EXITOSO COMPLETADO =====`);
-      this.logger.log(`📋 Order ${payment.orderId} marcada como pagada, stock actualizado y carrito limpiado`);
+      this.logger.log(`📋 Payment ${paymentIntentId} processed exactly once`);
     } catch (error) {
       this.logger.error(`❌ Error handling payment success: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
@@ -207,7 +221,9 @@ export class PaymentOrderService {
       }
 
       // Get payment intent details from Stripe
-      const paymentIntent = await this.paymentsService.getPaymentIntent(payment.stripePaymentIntentId);
+      const paymentIntent = await this.paymentsService.getPaymentIntent(
+        payment.stripePaymentIntentId,
+      );
 
       return {
         orderId,
@@ -230,14 +246,14 @@ export class PaymentOrderService {
    * IMPORTANTE: Este es el ÚNICO lugar donde se debe descontar el stock
    * para evitar descuentos dobles. El stock NO se descuenta durante la creación de la orden.
    */
-  private async updateProductStock(orderId: string): Promise<void> {
+  private async updateProductStock(orderId: string, manager: EntityManager): Promise<void> {
     try {
       this.logger.log('📦 ===== ACTUALIZANDO STOCK DE PRODUCTOS =====');
       this.logger.log(`📋 Order ID: ${orderId}`);
 
       // Get order details with products
       this.logger.log('🔍 Obteniendo detalles de la orden...');
-      const orderDetails = await this.orderDetailRepository.find({
+      const orderDetails = await manager.getRepository(OrderDetail).find({
         where: { order: { id: orderId } },
         relations: ['product'],
       });
@@ -245,48 +261,57 @@ export class PaymentOrderService {
       this.logger.log(`📦 Encontrados ${orderDetails.length} items en la orden`);
 
       if (orderDetails.length === 0) {
-        this.logger.warn(`⚠️ ADVERTENCIA: No se encontraron order details para la orden ${orderId}`);
-        return;
+        throw new Error(`No se encontraron detalles para la orden ${orderId}`);
       }
 
       for (const detail of orderDetails) {
-        this.logger.log(`🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`);
-        
+        this.logger.log(
+          `🔍 Procesando item: Product ID ${detail.product?.id}, Quantity: ${detail.quantity}`,
+        );
+
         if (!detail.product) {
-          this.logger.error(`❌ ERROR: Item sin producto asociado en order detail ${detail.id}`);
-          continue;
+          throw new Error(`Item sin producto asociado en order detail ${detail.id}`);
         }
 
-        const product = await this.productsRepository.findOneBy({ id: detail.product.id });
+        const product = await manager.findOne(Products, {
+          where: { id: detail.product.id },
+          lock: { mode: 'pessimistic_write' },
+        });
         if (!product) {
           this.logger.error(`❌ ERROR: Producto con ID ${detail.product.id} no encontrado`);
-          continue;
+          throw new Error(`Producto con ID ${detail.product.id} no encontrado`);
         }
 
         this.logger.log(`📦 Producto: ${product.name}`);
         this.logger.log(`📊 Stock actual: ${product.stock}`);
         this.logger.log(`📉 Cantidad a descontar: ${detail.quantity}`);
-        
+
         // Validate stock before decreasing
         if (product.stock < detail.quantity) {
-          this.logger.error(`❌ ERROR: Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`);
-          continue;
+          this.logger.error(
+            `❌ ERROR: Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`,
+          );
+          throw new Error(
+            `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Necesario: ${detail.quantity}`,
+          );
         }
-        
+
         // Decrease stock
         const newStock = product.stock - detail.quantity;
         product.stock = newStock;
-        
+
         this.logger.log(`📊 Nuevo stock: ${newStock}`);
-        
+
         // Deactivate product if stock reaches 0
         if (product.stock <= 0) {
           product.isActive = false;
           this.logger.log(`⚠️ Producto ${product.name} desactivado por stock agotado`);
         }
-        
-        await this.productsRepository.save(product);
-        this.logger.log(`✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`);
+
+        await manager.save(Products, product);
+        this.logger.log(
+          `✅ Stock actualizado para producto ${product.name}: -${detail.quantity} (nuevo stock: ${product.stock})`,
+        );
       }
 
       this.logger.log('✅ ===== STOCK DE PRODUCTOS ACTUALIZADO EXITOSAMENTE =====');
@@ -302,13 +327,13 @@ export class PaymentOrderService {
    * IMPORTANTE: Este es el ÚNICO lugar donde se debe marcar el código como usado
    * para evitar marcar códigos como usados si el pago falla.
    */
-  private async markDiscountCodeAsUsed(orderId: string): Promise<void> {
+  private async markDiscountCodeAsUsed(orderId: string, manager: EntityManager): Promise<void> {
     try {
       this.logger.log('🎫 ===== MARCANDO CÓDIGO DE DESCUENTO COMO USADO =====');
       this.logger.log(`📋 Order ID: ${orderId}`);
 
       // Get order with user information
-      const order = await this.ordersRepository.findOne({
+      const order = await manager.getRepository(Orders).findOne({
         where: { id: orderId },
         relations: ['user'],
       });
@@ -319,23 +344,26 @@ export class PaymentOrderService {
       }
 
       // Check if order has discount codes used (this would indicate a discount was applied)
-      const existingDiscountUsed = await this.discountCodesUsedRepository.findOne({
+      const existingDiscountUsed = await manager.getRepository(DiscountCodesUsed).findOne({
         where: { order: { id: orderId } },
         relations: ['discountCode'],
       });
 
       if (existingDiscountUsed) {
-        this.logger.log(`ℹ️ Código de descuento ya marcado como usado: ${existingDiscountUsed.discountCode?.code}`);
+        this.logger.log(
+          `ℹ️ Código de descuento ya marcado como usado: ${existingDiscountUsed.discountCode?.code}`,
+        );
         return;
       }
 
       // Check if the order has a discount code ID stored
       if (order.discountCodeId) {
         this.logger.log(`🎫 Código de descuento encontrado en la orden: ${order.discountCodeId}`);
-        
+
         // Get the discount code details
-        const discountCode = await this.discountCodesRepository.findOne({
+        const discountCode = await manager.getRepository(DiscountCodes).findOne({
           where: { id: order.discountCodeId },
+          lock: { mode: 'pessimistic_write' },
         });
 
         if (!discountCode) {
@@ -343,18 +371,22 @@ export class PaymentOrderService {
           return;
         }
 
-        this.logger.log(`🎫 Código de descuento: ${discountCode.code} (${discountCode.percentage}%)`);
+        this.logger.log(
+          `🎫 Código de descuento: ${discountCode.code} (${discountCode.percentage}%)`,
+        );
 
         // Create the discount code used record
-        const discountUsed = this.discountCodesUsedRepository.create({
+        const discountUsed = manager.getRepository(DiscountCodesUsed).create({
           discountCode: { id: order.discountCodeId },
           user: { id: order.userId },
           order: { id: orderId },
           usedAt: new Date(),
         });
 
-        await this.discountCodesUsedRepository.save(discountUsed);
-        this.logger.log(`✅ Código de descuento ${discountCode.code} marcado como usado exitosamente`);
+        await manager.save(DiscountCodesUsed, discountUsed);
+        this.logger.log(
+          `✅ Código de descuento ${discountCode.code} marcado como usado exitosamente`,
+        );
       } else {
         this.logger.log(`ℹ️ No se aplicó código de descuento en esta orden`);
       }
@@ -363,8 +395,7 @@ export class PaymentOrderService {
     } catch (error) {
       this.logger.error(`❌ ERROR en markDiscountCodeAsUsed: ${error.message}`);
       this.logger.error(`❌ Error stack: ${error.stack}`);
-      // Don't throw error here as the payment was successful
-      // Just log it for monitoring
+      throw error;
     }
   }
 }
