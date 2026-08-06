@@ -6,11 +6,16 @@ import {
   UploadedFile,
   Get,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileUploadService } from './file-upload.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import type { Express } from 'express';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
+import { RolesGuard } from '../common/guard/roles.guard';
+import { HasRoles } from '../decorators/roles';
+import { Roles } from '../users/entities/user.entity';
 
 @ApiTags('FileUpload')
 @Controller('file')
@@ -20,6 +25,8 @@ export class FileUploadController {
   constructor(private readonly fileUploadService: FileUploadService) {}
 
   @Post('uploadImage/:productId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Subir imagen para un producto' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Imagen subida exitosamente' })

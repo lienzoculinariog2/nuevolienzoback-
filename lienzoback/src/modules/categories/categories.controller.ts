@@ -10,18 +10,25 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
+  UseGuards,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
+import { RolesGuard } from '../common/guard/roles.guard';
+import { HasRoles } from '../decorators/roles';
+import { Roles } from '../users/entities/user.entity';
 
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Create a new category (for administrators only)' })
   @UseInterceptors(FileInterceptor('file'))
   create(
@@ -53,6 +60,8 @@ export class CategoriesController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Update an existing category (for administrators only)' })
   @UseInterceptors(FileInterceptor('file'))
   update(
@@ -70,12 +79,16 @@ export class CategoriesController {
   }
 
   @Put('inactivate/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Inactivate a category by id (for administrators only)' })
   inactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.inactivate(id);
   }
 
   @Put('activate/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @HasRoles(Roles.ADMIN)
   @ApiOperation({ summary: 'Activate a category by id (for administrators only)' })
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.activate(id);
